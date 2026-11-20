@@ -1,0 +1,16 @@
+{
+  "include": ["app", "workers", "src", "tests/unit", "*.ts", ".react-router/types"],
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": true,
+    "rootDirs": [".", "./.react-router/types"],
+    "types": ["vite/client", "./worker-configuration.d.ts"]
+  }
+}

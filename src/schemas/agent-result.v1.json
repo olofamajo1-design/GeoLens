@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "agent-result",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "storyId",
+    "taskId",
+    "agentId",
+    "attempt",
+    "synthetic",
+    "summary",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "storyId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "taskId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "agentId": {
+      "enum": [
+        "GL-AGENT-001",
+        "GL-AGENT-002",
+        "GL-AGENT-003",
+        "GL-AGENT-004",
+        "GL-AGENT-005",
+        "GL-AGENT-006",
+        "GL-AGENT-007",
+        "GL-AGENT-008"
+      ]
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3
+    },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "evidence": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceId",
+          "description"
+        ],
+        "properties": {
+          "sourceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      }
+    }
+  }
+}

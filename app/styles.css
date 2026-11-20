@@ -1,0 +1,19 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #182c28;
+  background: #f4f7f4;
+  line-height: 1.6;
+}
+
+body { margin: 0; }
+main { width: min(48rem, calc(100% - 2rem)); margin: 3rem auto; }
+h1 { font-size: clamp(2rem, 6vw, 3.5rem); line-height: 1.1; margin: 0 0 2rem; }
+h2 { margin-top: 0; }
+.brand { font-weight: 700; color: #315c4b; }
+section { background: white; padding: 1.25rem; margin-bottom: 1rem; border: 1px solid #d5e0d8; border-radius: .65rem; }
+ul { padding: 0; list-style: none; }
+li { display: flex; flex-wrap: wrap; gap: .25rem 1rem; padding: .5rem 0; border-bottom: 1px solid #d5e0d8; }
+li:last-child { border-bottom: 0; }
+code { color: #315c4b; }
+dt { font-weight: 650; }
+dd { margin: 0 0 .75rem; }
