@@ -38,11 +38,11 @@ async function hash(value: string) {
   return Array.from(new Uint8Array(bytes), (part) => part.toString(16).padStart(2, "0")).join("");
 }
 
-export async function normalize(lead: Lead, adapter: Adapter) {
+export async function normalize(lead: Lead, adapter: Adapter, { pilot = false } = {}) {
   const title = lead.title.replace(/<[^>]*>/g, " ").replace(/[<>\p{Cc}\p{Cf}]/gu, "").normalize("NFKC").replace(/\s+/g, " ").trim().slice(0, 400);
   if (!title) return null;
   const url = canonicalUrl(lead.url);
-  const originalUrl = url && lead.url?.length && lead.url.length <= 2048 ? lead.url : null;
+  const originalUrl = !pilot && url && lead.url?.length && lead.url.length <= 2048 ? lead.url : null;
   const id = lead.id?.trim().slice(0, 400) || url;
   if (!id) return null;
   const timestamp = lead.occurredAt ? Date.parse(lead.occurredAt) : NaN;
@@ -58,9 +58,13 @@ export async function normalize(lead: Lead, adapter: Adapter) {
   const entityNames = entities.filter((item) => item.match.test(title)).map(({ name }) => name);
   return {
     externalReference: id, originalUrl, canonicalUrl: url, title, occurredAt, timeBasis: occurredAt ? (adapter === "gdelt" ? "observed" : "published") : null, language: lead.language?.slice(0, 40) || null,
-    digest: await hash(JSON.stringify({ title, url, occurredAt, origin, language: lead.language?.slice(0, 40) || null })),
+    digest: await hash(JSON.stringify({
+      title, url, occurredAt: pilot && adapter === "gdelt" ? null : occurredAt, origin,
+      language: lead.language?.slice(0, 40) || null, observation: lead.observation,
+    })),
     fingerprint, origin, location: location ? { name: location.name, country: location.country } : null,
     entities: entityNames,
+    ...(lead.observation ? { observation: lead.observation } : {}),
     // Only narrowly classified same-day leads group automatically. Incomplete leads stay separate.
     cluster: location && topic && occurredAt ? `${location.country}:${location.name}:${topic.id}:${occurredAt.slice(0, 10)}` : null,
   };

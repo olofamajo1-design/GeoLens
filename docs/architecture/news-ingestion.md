@@ -4,24 +4,21 @@ Milestone 4 keeps discovery private. It writes source metadata, candidate events
 
 ## Permission review and restricted egress
 
-The three pilot candidates are registered disabled. No acquisition licence has been granted to a live endpoint. The implementation has a fixture-only persistence gate and a fixture-only Worker mode. Live activation requires a separately reviewed change and authorization.
+The live pilot is limited to GDELT and the approved World Bank indicator. Both endpoints remain disabled by default. An active acquisition licence and a time-limited grant for a dedicated ingestion operator are required. Premium Times remains disabled and cannot be selected by the pilot runner.
 
-| Candidate | Proposed runtime hostname and path | Permission status and permitted pilot shape |
+| Source | Restricted runtime destination | Authorized data shape |
 |---|---|---|
-| GDELT DOC API | `api.gdeltproject.org`, `/api/v2/doc/doc` | Pending confirmation of API access, limits, attribution, and retention. Propose discovery metadata only. The API response does not grant rights to linked publisher material. Never fetch those article URLs as part of this pilot. |
-| World Bank Indicators API | `api.worldbank.org`, `/v2/country/NGA/indicator/SP.POP.TOTL` | Pending confirmation of the selected indicator's dataset terms, attribution, and retention. Check metadata for exceptions and third-party rights. Propose country, indicator, year, and numeric observation only. |
-| Premium Times | Candidate hostname `www.premiumtimesng.com`. Exact authorized endpoint is still required. | No confirmed publisher permission. An RSS feed's existence or accessibility does not establish storage or reuse rights. Confirm authorized fields, attribution, polling limits, retention, and syndication before adding it to the runtime allowlist. |
+| GDELT DOC | `api.gdeltproject.org`, HTTPS port 443, `/api/v2/doc/doc` | Headline, linked article URL, language, and GDELT observation timestamp only. Credit The GDELT Project (DOC 2.0 API) and preserve the linked publisher URL as inert metadata. GDELT does not grant this pilot access to publisher articles. |
+| World Bank Indicators | `api.worldbank.org`, HTTPS port 443, `/v2/country/NGA/indicator/SP.POP.TOTL` | Nigeria, indicator `SP.POP.TOTL`, observation year, and integer population count. Attribute World Bank, World Development Indicators: Population, total (SP.POP.TOTL), Nigeria. |
 
-The cloud proxy denied access to the provider terms and documentation during the review. No provider was contacted for live ingestion. Start the restricted pilot with the exact API host and path for each source whose terms are approved. Keep Premium Times closed until its endpoint permission is documented. Documentation hosts only serve review needs and are not runtime destinations.
+Review the [GDELT licensing reference](https://gdeltproject.org/about.html), [World Bank dataset terms](https://www.worldbank.org/ext/en/legal/terms-conditions/datasets), and [approved indicator](https://data.worldbank.org/indicator/SP.POP.TOTL?locations=NG). Verify any source-specific exceptions, terms of attribution and retention, and rate limits before creating the local acquisition licence. The cloud proxy blocked these references, so the terms remain unread in this session. The pilot stages metadata only and applies the earlier of the thirty-day per-record limit and the licence-specific retention deadline.
 
-Official references for the review:
+### Set the exact domain grants
 
-- [GDELT DOC 2.0 API](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/)
-- [World Bank Indicators API](https://datahelpdesk.worldbank.org/knowledgebase/articles/889392-about-the-indicators-api-documentation)
-- [World Bank dataset terms](https://www.worldbank.org/en/about/legal/terms-of-use-for-datasets)
-- [Premium Times](https://www.premiumtimesng.com/)
-
-Before activation, record the exact endpoint and operator, terms reference, agreed fields, attribution text, rate limit, licence validity and revocation, and retention deadline. Confirm purge and down-stream citation handling for that licence before storing live data. This version records the retention deadline and excludes expired or revoked lineage from new scores. It does not perform automatic retention deletion.
+1. In the Codex task, open **Environment settings → Internet access** and keep **Restricted** selected.
+2. In **Allowed domains**, add `api.gdeltproject.org` and `api.worldbank.org`, one per entry. Preserve existing presets. Use exact domain names with no scheme, path, port, IP address, or wildcard.
+3. Save and apply the settings to the running task, or reconnect to the updated environment if the settings require it. Verify that the two names appear in the enforced rules. Leave provider documentation, linked publishers and Premium Times outside the runtime allowlist.
+4. Check the connection path. A hostname-only HTTPS proxy can allow a CONNECT request and still hide the actual provider IP. The pilot CLI requires a supported restricted route where it can pin the resolved public address, inspect the connected peer and validate the provider TLS certificate. If the environment only offers hostname-only CONNECT, use an authorized runner with a restrictive direct egress policy and observable peers, or obtain a platform-supported route that can enforce and report those destination guarantees. Preserve the configured proxy and certificate settings.
 
 ## Local operation
 
@@ -38,9 +35,24 @@ npm run test:workflow
 
 The manual dry-run prints normalized synthetic leads without writes. The Workflow test exercises the built Worker, a local Cron dispatch and the database with a separate synthetic authenticated ingestion identity. Use the pinned local Supabase CLI from the database security guide. The Workflow test accepts `GEOLENS_SUPABASE_CLI` and the browser suite accepts `PLAYWRIGHT_CHROMIUM_EXECUTABLE`.
 
-The Wrangler default disables dispatch. Fixture dispatch uses `*/15 * * * *` UTC, a deterministic Workflow ID per window, and a dedicated ingestion account on the local API. Only fixture mode can use the loopback PostgREST store. Each due source is checked for an enabled endpoint and a current acquisition licence. SQL validates the licence again under a lock at commit time. An overlapping or retried cycle shares one lease, and terminal run results are immutable to the fixture caller. The pilot takes up to ten records per source per cycle with no pagination. Unknown or unlicensed fields are rejected from the normalized contract.
+The Wrangler default disables dispatch. Fixture dispatch uses `*/15 * * * *` UTC, a deterministic Workflow ID per window, and a dedicated ingestion account on the local API. The Worker opens the loopback PostgREST store only in fixture mode. The separate Node pilot also uses the local store with its own time-limited grant. Each due source is checked for an enabled endpoint and a current acquisition licence. SQL validates the licence again under a lock at commit time. An overlapping or retried cycle shares one lease, and terminal run results are immutable to the fixture caller. The pilot takes up to ten records per source per cycle with no pagination. Unknown or unlicensed fields are rejected from the normalized contract.
 
-The separate guarded retrieval adapter supports conditional requests, bounded streaming responses, timeouts, and provider backoff. It refuses unregistered URLs and redirects. Before wiring it into a live runtime, validate the restricted gateway's DNS and connection-time public-IP enforcement. The fixture Worker has no external transport binding. RSS parsing rejects DTDs and retains selected metadata only. Provider content never becomes an instruction, executable markup, model request or follow-up URL.
+The local pilot runner validates A and AAAA answers as public destinations, pins one approved address, connects with TLS SNI for the exact host, and checks the TLS peer and port before sending HTTP. It rejects special-use addresses, mixed public/private answers, redirects, and oversized or unexpected response bodies. It sends one credential-free request per source per cycle. Conditional retrieval and provider backoff are available in the shared adapter, and the pilot consumes its reservation even when transport fails. The fixture Worker has no external transport binding. The provider response is parsed as data and filtered to the licensed metadata fields.
+
+## Activate and run the local pilot
+
+Complete the terms and network checks before activating a source. Use a disposable local Supabase project. Give the dedicated local Auth account the existing `ingestion_operator` role through the normal administrator process. For each verified source, run the following against that project's local Postgres with reviewed expiry dates. The authorization script locks the registered endpoint and applies an audited licence.
+
+```sh
+docker exec -i supabase_db_geolens-security psql -X -U postgres \
+  -v source_adapter=world-bank -v operator_id=AUTH_USER_UUID \
+  -v licensed_until=REVIEWED_VALID_UNTIL_UTC -v retention_until=REVIEWED_RETENTION_DEADLINE_UTC \
+  < scripts/discovery-pilot-authorize.sql
+```
+
+Set `GEOLENS_PILOT_ANON_KEY` to the local project's public key and `GEOLENS_PILOT_OPERATOR_JWT` to that account's current access token in the runner's private environment. Keep the credentials out of the shell command, repository, and logs. Run `npm run ingestion:pilot -- world-bank` for one source or `npm run ingestion:pilot` for both. The command reports counts and bounded status codes. A repeated invocation in the same window performs no second GET. Use a later permitted window to verify deduplication against unchanged provider records. The local role cannot release news.
+
+Pilot documents expire at the earlier of 720 hours from insertion or the source licence's retention deadline. The local database schedules cleanup every minute and the pilot also checks expiry before inserting. Revocation makes affected data eligible for cleanup. Cleanup removes the document and provenance, refreshes or removes any affected candidate events, and clears dependent rank snapshots. Database triggers keep pilot documents and events out of permanent editorial and research references. Technical run counters and timestamps remain available without the removed source metadata. A stopped database resumes cleanup when it runs again.
 
 ## Provenance, ranking and costs
 

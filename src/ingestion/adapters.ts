@@ -1,7 +1,17 @@
 import { SaxesParser } from "saxes";
 
 export type Adapter = "gdelt" | "rss" | "world-bank";
-export type Lead = { id?: string; url?: string; title: string; occurredAt?: string; origin?: string; language?: string };
+export type PilotAdapter = Exclude<Adapter, "rss">;
+export type PopulationObservation = { country: "NGA"; indicator: "SP.POP.TOTL"; year: number; value: number };
+export type Lead = {
+  id?: string;
+  url?: string;
+  title: string;
+  occurredAt?: string;
+  origin?: string;
+  language?: string;
+  observation?: PopulationObservation;
+};
 const maxRecords = 10;
 
 function object(value: unknown): Record<string, unknown> {
@@ -76,5 +86,36 @@ export function parseLeads(adapter: Adapter, body: string): Lead[] {
     const indicatorId = string(indicator.id);
     if (!country || !label || !year || !code || !indicatorId || typeof row.value !== "number") return [];
     return [{ id: [code, indicatorId, year].join(":"), title: `${country} — ${label}: ${row.value} (${year})`, origin: "world-bank" }];
+  });
+}
+
+
+export function parsePilotLeads(adapter: PilotAdapter, body: string): Lead[] {
+  if (adapter === "gdelt") return parseLeads(adapter, body);
+  const response: unknown = JSON.parse(body);
+  if (!Array.isArray(response) || response.length !== 2) throw new Error("invalid_provider_response");
+  const [, rows] = response;
+  if (rows === null) return [];
+  if (!Array.isArray(rows)) throw new Error("invalid_provider_response");
+  return rows.slice(0, maxRecords).flatMap((entry) => {
+    const row = object(entry);
+    const year = string(row.date);
+    if (row.countryiso3code !== "NGA" || object(row.indicator).id !== "SP.POP.TOTL" ||
+      !year || !/^\d{4}$/.test(year) || Number(year) < 1960 || Number(year) > new Date().getUTCFullYear()) {
+      throw new Error("unapproved_observation");
+    }
+    if (row.value === null) return [];
+    if (typeof row.value !== "number" || !Number.isSafeInteger(row.value) || row.value < 0) {
+      throw new Error("invalid_provider_response");
+    }
+    const observation: PopulationObservation = {
+      country: "NGA", indicator: "SP.POP.TOTL", year: Number(year), value: row.value,
+    };
+    return [{
+      id: `NGA:SP.POP.TOTL:${year}`,
+      title: `Nigeria — Population, total: ${row.value} (${year})`,
+      origin: "world-bank",
+      observation,
+    }];
   });
 }

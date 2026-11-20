@@ -11,7 +11,14 @@ export const maxBodyBytes = 512 * 1024;
 export type Retrieval = (url: URL, options: RequestInit) => Promise<Response>;
 
 export class RetrievalFailure extends Error {
-  constructor(readonly code: string, readonly retryAfterSeconds = 0) { super(code); }
+  readonly code: string;
+  readonly retryAfterSeconds: number;
+
+  constructor(code: string, retryAfterSeconds = 0) {
+    super(code);
+    this.code = code;
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
 }
 
 // The transport is an injected restricted gateway. There is no direct Worker fetch fallback.
