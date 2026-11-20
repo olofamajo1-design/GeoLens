@@ -22,3 +22,7 @@ The check command generates types, runs unit tests, builds the Worker, and smoke
 - [Local development and CI](docs/operations/development.md)
 - [Foundation architecture](docs/architecture/foundation.md)
 - [Newsroom contracts and editorial policy](docs/newsroom/contracts.md)
+
+## Local database security
+
+See [Milestone 2 database security](docs/architecture/database-security.md) for the migration model and the disposable Supabase Auth, Storage, and authorization tests.
