@@ -19,7 +19,8 @@
     "prebuild": "npm run generate:schemas",
     "pretypecheck": "npm run generate:schemas",
     "pretest": "npm run generate:schemas",
-    "test:database": "node --test tests/integration/supabase.test.mjs"
+    "test:database": "node --test tests/integration/supabase.test.mjs",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "ajv": "8.20.0",
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.70.1",
+    "@playwright/test": "1.65.1",
     "@react-router/dev": "8.5.2",
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",

@@ -4,7 +4,7 @@ import { once } from "node:events";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 
-test("the built Worker serves health and renders the synthetic newsroom", { timeout: 45_000 }, async () => {
+test("the built Worker serves health and renders the synthetic reader", { timeout: 45_000 }, async () => {
   const port = 4174;
   const baseUrl = "http://127.0.0.1:" + port;
   const server = spawn(process.execPath, [
@@ -40,8 +40,17 @@ test("the built Worker serves health and renders the synthetic newsroom", { time
     assert.equal(home.status, 200);
     const html = await home.text();
     assert.match(html, /Synthetic preview/);
-    assert.match(html, /No reporting was performed/);
-    assert.match(html, /GL-AGENT-008/);
+    assert.match(html, /Trending Stories/);
+    assert.match(html, /Lagos looks to the water/);
+    assert.doesNotMatch(html, /GL-AGENT-008/);
+
+    const article = await fetch(baseUrl + "/articles/lagos-waterfront", { signal: AbortSignal.timeout(5000) });
+    assert.equal(article.status, 200);
+    assert.match(await article.text(), /Quick Brief/);
+
+    const unpublished = await fetch(baseUrl + "/articles/private-editorial-draft", { signal: AbortSignal.timeout(5000) });
+    assert.equal(unpublished.status, 404);
+    assert.doesNotMatch(await unpublished.text(), /Deep Dive/);
   } finally {
     server.kill();
     await closed;

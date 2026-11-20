@@ -1,6 +1,6 @@
 # Foundation architecture
 
-The app is one React Router v8 package running server-side on a Cloudflare Worker through the Cloudflare Vite plugin. The Worker delegates HTTP requests to React Router. The root route runs a synthetic provider task and returns the validated result for display. The health route provides a credential-free runtime check.
+The app is one React Router v8 package running server-side on a Cloudflare Worker through the Cloudflare Vite plugin. The Worker delegates HTTP requests to React Router. The reader routes serve a public synthetic catalogue through server loaders in `src/reader/`. The health route provides a credential-free runtime check. The original synthetic newsroom adapter is exercised by the newsroom contract tests.
 
 - `app/` contains routes, rendering, and styles.
 - `workers/` contains the Worker entry point. Future Cron and Workflow entry points belong here, with workflow definitions in `workers/workflows/`.
