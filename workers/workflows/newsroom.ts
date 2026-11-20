@@ -20,14 +20,18 @@ const executionStep: WorkflowStepConfig = {
 };
 const provider = createOpenAIFixtureProvider();
 
+export function hasFixtureNewsroom(env: Env) {
+  return env.NEWSROOM_MODE === "fixture" || env.NEWSROOM_MODE === "research-fixture";
+}
+
 export async function dispatchNewsroomScan(env: Env, cycle: string) {
-  if (env.NEWSROOM_MODE === "fixture") {
+  if (hasFixtureNewsroom(env)) {
     await env.NEWSROOM.createBatch([{ id: "newsroom-scan-" + cycle, params: { mode: "scan", cycle } }]);
   }
 }
 
 function database(env: Env) {
-  if (env.NEWSROOM_MODE !== "fixture" || !env.NEWSROOM_DB_URL
+  if (!hasFixtureNewsroom(env) || !env.NEWSROOM_DB_URL
     || !env.NEWSROOM_DB_PUBLIC_KEY || !env.NEWSROOM_OPERATOR_JWT) throw new Error("fixture_newsroom_disabled");
   return localFixtureRpc<Method>(env.NEWSROOM_DB_URL, env.NEWSROOM_DB_PUBLIC_KEY, env.NEWSROOM_OPERATOR_JWT, "newsroom_store_");
 }
@@ -38,7 +42,9 @@ export class NewsroomWorkflow extends WorkflowEntrypoint<Env, Schedule> {
     const payload = event.payload;
     if (payload.mode === "scan") {
       const runs = await step.do("rank discovery and queue fixtures", databaseStep,
-        () => rpc<string[]>("scan_newsroom_fixtures", { prompt_manifest: promptManifest }));
+        () => rpc<string[]>("scan_newsroom_fixtures", {
+          prompt_manifest: promptManifest, research_mode: this.env.NEWSROOM_MODE === "research-fixture",
+        }));
       if (runs.length) {
         await step.do("dispatch fixture stories", databaseStep, async () => {
           await this.env.NEWSROOM.createBatch(runs.map((runId) => ({
@@ -65,7 +71,8 @@ export class NewsroomWorkflow extends WorkflowEntrypoint<Env, Schedule> {
             const result = await executeFixture(claim, provider);
             return rpc<string>("finish_newsroom_fixture", "failure" in result
               ? { ...lease, failure: result.failure }
-              : { ...lease, result: result.output, in_tokens: result.inputTokens, out_tokens: result.outputTokens });
+              : { ...lease, result: result.output, in_tokens: result.inputTokens, out_tokens: result.outputTokens,
+                research_result: result.researchResult });
           });
         }));
       } else if (batch.budgetBlocked || !batch.wakeAt) {

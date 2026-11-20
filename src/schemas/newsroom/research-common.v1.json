@@ -1,0 +1,429 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.geolens.invalid/newsroom/research-common.v1.json",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$"
+    },
+    "idList": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+      },
+      "maxItems": 48,
+      "uniqueItems": true
+    },
+    "citations": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+      },
+      "maxItems": 48,
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "documentId",
+        "sourceId",
+        "headline",
+        "attribution",
+        "canonicalUrl",
+        "origin",
+        "fingerprint"
+      ],
+      "properties": {
+        "documentId": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+        },
+        "sourceId": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+        },
+        "headline": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "attribution": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "canonicalUrl": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^https://[^/@ ]+(/|$)",
+              "maxLength": 2048
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "scores": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "impact",
+        "evidence",
+        "urgency",
+        "regional",
+        "historical"
+      ],
+      "properties": {
+        "impact": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "evidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "urgency": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "regional": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "historical": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "high",
+        "standard",
+        "monitor",
+        "archive"
+      ]
+    },
+    "depth": {
+      "type": "string",
+      "enum": [
+        "contextual",
+        "extended",
+        "deep"
+      ]
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "high",
+        "moderate",
+        "low",
+        "insufficient_evidence"
+      ]
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "nigeria",
+        "africa",
+        "global"
+      ]
+    },
+    "historicalStatus": {
+      "type": "string",
+      "enum": [
+        "documented",
+        "disputed"
+      ]
+    },
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "earliestYear",
+        "latestYear",
+        "exactDate",
+        "certainty"
+      ],
+      "properties": {
+        "earliestYear": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -1000000,
+              "maximum": 1000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latestYear": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -1000000,
+              "maximum": 1000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exactDate": {
+          "anyOf": [
+            {
+              "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "certainty": {
+          "type": "string",
+          "enum": [
+            "documented",
+            "approximate",
+            "disputed",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "historicalFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject",
+        "statement",
+        "period",
+        "status",
+        "perspective",
+        "evidenceIds"
+      ],
+      "properties": {
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 600
+        },
+        "period": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/period"
+        },
+        "status": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/historicalStatus"
+        },
+        "perspective": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/scope"
+        },
+        "evidenceIds": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/citations"
+        }
+      }
+    },
+    "claimType": {
+      "type": "string",
+      "enum": [
+        "number",
+        "date",
+        "quotation",
+        "attribution",
+        "fact"
+      ]
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidenceIds",
+        "independentSourceCount"
+      ],
+      "properties": {
+        "evidenceIds": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/idList"
+        },
+        "independentSourceCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 24
+        }
+      }
+    },
+    "framing": {
+      "type": "string",
+      "enum": [
+        "established_fact",
+        "documented_objective",
+        "inferred_intention",
+        "assumption"
+      ]
+    },
+    "domain": {
+      "type": "string",
+      "enum": [
+        "political",
+        "economic",
+        "security",
+        "humanitarian"
+      ]
+    },
+    "horizon": {
+      "type": "string",
+      "enum": [
+        "short",
+        "medium",
+        "long"
+      ]
+    },
+    "analyticalFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject",
+        "statement",
+        "framing",
+        "scope",
+        "domain",
+        "evidenceIds"
+      ],
+      "properties": {
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 600
+        },
+        "framing": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/framing"
+        },
+        "scope": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/scope"
+        },
+        "domain": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/domain"
+        },
+        "evidenceIds": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/citations"
+        }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "framing",
+        "horizon",
+        "months",
+        "condition",
+        "outcome",
+        "assumptions",
+        "earlyWarnings",
+        "evidenceIds"
+      ],
+      "properties": {
+        "framing": {
+          "type": "string",
+          "const": "conditional_forecast"
+        },
+        "horizon": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/horizon"
+        },
+        "months": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 36
+          }
+        },
+        "condition": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 600
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 600
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "maxItems": 48
+        },
+        "earlyWarnings": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "maxItems": 48
+        },
+        "evidenceIds": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/idList"
+        }
+      }
+    }
+  }
+}

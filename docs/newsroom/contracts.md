@@ -2,7 +2,9 @@
 
 The registry in `src/newsroom/registry.ts` defines the eight approved IDs and names. Add versioned production prompts under `prompts/newsroom/` when the approved prompts and handoffs arrive.
 
-The Draft 2020-12 task and result schemas share the schema version, story ID, task ID, agent ID, and attempt. Results include a synthetic flag, a summary, and evidence references. The adapter boundary validates both directions and rejects a result whose task identity or attempt does not match. These are foundation envelopes. Role-specific payloads and durable evidence records follow the detailed specifications.
+The foundation Draft 2020-12 task and result schemas share the schema version, story ID, task ID, agent ID, and attempt. Results include a synthetic flag, a summary, and evidence references. The adapter boundary validates both directions and checks the result against the task identity and attempt.
+
+[Stage 5B](../architecture/newsroom-stage-5b.md) defines the role-specific research contracts for discovery, history, verification and analysis, with private durable source and evidence links.
 
 ## Editorial authority
 
@@ -12,6 +14,6 @@ Private Ask GeoLens and FactCheck responses are exempt from individual human app
 
 ## Requirements for orchestration and sources
 
-The launch target is five fully researched stories daily with rolling publication. Orchestration must cap active tasks at three per story, technical attempts at three, and automated revisions at two per editorial stage. Retry after 5 and 30 seconds, respecting provider limits. Use a 180-second standard timeout and a 300-second research and visual timeout. The foundation validates the attempt number in message envelopes. Scheduling, concurrency, timeouts, retries, and editorial revision limits still need runtime enforcement.
+The launch target is five fully researched stories daily with rolling publication. The fixture Orchestrator caps active tasks at three per story, technical attempts at three, and automated revisions at two per supported editorial stage. Retry eligibility follows 5- and 30-second delays. Standard work has a 180-second timeout, and historical research and visual work have a 300-second timeout.
 
 Prioritize Nigerian and African coverage as part of global reporting. Verify permissions before integrating each source from GDELT, publisher feeds, primary institutional records, or historical archives.

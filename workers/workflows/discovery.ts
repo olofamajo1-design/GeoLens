@@ -5,7 +5,7 @@ import { fixturePayloads } from "../../src/ingestion/fixtures";
 import { normalize } from "../../src/ingestion/normalize";
 import { validateDiscovery } from "../../src/newsroom/generated/validators.mjs";
 import { fixtureStore } from "../../src/ingestion/store";
-import { dispatchNewsroomScan } from "./newsroom";
+import { dispatchNewsroomScan, hasFixtureNewsroom } from "./newsroom";
 
 type ScheduledDiscovery = { cycle: string };
 type DiscoveryRun = { id: string; adapter: Adapter; fixture: boolean };
@@ -43,7 +43,7 @@ export class DiscoveryWorkflow extends WorkflowEntrypoint<Env, ScheduledDiscover
       }));
       if (state === "complete") completedFixture = true;
     }
-    if (completedFixture && this.env.NEWSROOM_MODE === "fixture") {
+    if (completedFixture && hasFixtureNewsroom(this.env)) {
       await step.do("reassess newsroom after discovery", stepOptions, async () => {
         await dispatchNewsroomScan(this.env, "discovery-" + Date.parse(event.payload.cycle));
         return null;

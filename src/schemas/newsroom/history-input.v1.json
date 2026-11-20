@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.geolens.invalid/newsroom/history-input.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stage",
+    "contractVersion",
+    "synthetic",
+    "eventId",
+    "attemptId",
+    "sources",
+    "depth",
+    "evidence"
+  ],
+  "properties": {
+    "stage": {
+      "type": "string",
+      "const": "history"
+    },
+    "contractVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "synthetic": {
+      "type": "boolean",
+      "const": true
+    },
+    "eventId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "attemptId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/source"
+      },
+      "maxItems": 24
+    },
+    "depth": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/depth"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "evidenceId",
+          "documentId",
+          "locator",
+          "excerpt",
+          "annotation"
+        ],
+        "properties": {
+          "evidenceId": {
+            "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+          },
+          "documentId": {
+            "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+          },
+          "locator": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "excerpt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 800
+          },
+          "annotation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "category",
+              "subject",
+              "statement",
+              "period",
+              "status",
+              "perspective",
+              "depth"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "history"
+              },
+              "category": {
+                "type": "string",
+                "enum": [
+                  "origin",
+                  "actor",
+                  "turning_point",
+                  "root_cause",
+                  "resolution",
+                  "comparison",
+                  "interpretation",
+                  "consequence"
+                ]
+              },
+              "subject": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 600
+              },
+              "period": {
+                "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/period"
+              },
+              "status": {
+                "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/historicalStatus"
+              },
+              "perspective": {
+                "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/scope"
+              },
+              "depth": {
+                "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/depth"
+              }
+            }
+          }
+        }
+      },
+      "maxItems": 48
+    }
+  }
+}

@@ -5,6 +5,7 @@ import task from "../src/schemas/agent-task.v1.json" with { type: "json" };
 import result from "../src/schemas/agent-result.v1.json" with { type: "json" };
 import discovery from "../src/schemas/discovery-documents.v1.json" with { type: "json" };
 import fixtureTask from "../src/schemas/newsroom-fixture-task.v1.json" with { type: "json" };
+import researchCommon from "../src/schemas/newsroom/research-common.v1.json" with { type: "json" };
 import fixtureOutput from "../src/schemas/newsroom-fixture-output.v1.json" with { type: "json" };
 import { agents } from "../src/newsroom/registry.ts";
 
@@ -17,6 +18,16 @@ ajv.addSchema(result, "result");
 ajv.addSchema(discovery, "discovery");
 ajv.addSchema(fixtureOutput, "fixtureOutput");
 ajv.addSchema(fixtureTask, "fixtureTask");
+ajv.addSchema(researchCommon);
+
+const researchValidators = {};
+for (const stage of ["discovery", "history", "verification", "analysis"]) {
+  for (const direction of ["input", "output"]) {
+    const schema = JSON.parse(readFileSync(new URL(`../src/schemas/newsroom/${stage}-${direction}.v1.json`, import.meta.url), "utf8"));
+    ajv.addSchema(schema);
+    researchValidators["validate" + stage[0].toUpperCase() + stage.slice(1) + (direction === "input" ? "Input" : "Output")] = schema.$id;
+  }
+}
 
 const directory = new URL("../src/newsroom/generated/", import.meta.url);
 mkdirSync(directory, { recursive: true });
@@ -26,15 +37,19 @@ const generated = standalone(ajv, {
   validateDiscovery: "discovery",
   validateFixtureTask: "fixtureTask",
   validateFixtureOutput: "fixtureOutput",
+  ...researchValidators,
 });
-// Ajv emits a CommonJS reference for its Unicode length helper even in ESM mode.
-const esm = generated.replaceAll('require("ajv/dist/runtime/ucs2length").default', "ucs2length");
+// Ajv emits CommonJS references for these runtime helpers even in ESM mode.
+const esm = generated.replaceAll('require("ajv/dist/runtime/ucs2length").default', "ucs2length")
+  .replaceAll('require("ajv/dist/runtime/equal").default', "deepEqual");
 if (/\brequire\s*\(/.test(esm)) {
   throw new Error("A generated validator uses an unexpected CommonJS helper");
 }
 writeFileSync(
   new URL("validators.mjs", directory),
-  'import unicodeLength from "ajv/dist/runtime/ucs2length.js";\nconst ucs2length = typeof unicodeLength === "function" ? unicodeLength : unicodeLength.default;\n' + esm,
+  'import unicodeLength from "ajv/dist/runtime/ucs2length.js";\nimport equality from "ajv/dist/runtime/equal.js";\n'
+  + 'const ucs2length = typeof unicodeLength === "function" ? unicodeLength : unicodeLength.default;\n'
+  + 'const deepEqual = typeof equality === "function" ? equality : equality.default;\n' + esm,
 );
 
 const promptDirectory = new URL("../prompts/newsroom/", import.meta.url);

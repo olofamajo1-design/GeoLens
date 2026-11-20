@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.geolens.invalid/newsroom/verification-input.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stage",
+    "contractVersion",
+    "synthetic",
+    "eventId",
+    "attemptId",
+    "sources",
+    "asOf",
+    "evidence"
+  ],
+  "properties": {
+    "stage": {
+      "type": "string",
+      "const": "verification"
+    },
+    "contractVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "synthetic": {
+      "type": "boolean",
+      "const": true
+    },
+    "eventId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "attemptId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/source"
+      },
+      "maxItems": 24
+    },
+    "asOf": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/date"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "evidenceId",
+          "documentId",
+          "locator",
+          "excerpt",
+          "annotation"
+        ],
+        "properties": {
+          "evidenceId": {
+            "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+          },
+          "documentId": {
+            "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+          },
+          "locator": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "excerpt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 800
+          },
+          "annotation": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "originalClaim",
+                  "atoms"
+                ],
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "claim"
+                  },
+                  "originalClaim": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 600
+                  },
+                  "atoms": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "claimId",
+                        "type",
+                        "normalizedClaim",
+                        "value",
+                        "material",
+                        "sensitive"
+                      ],
+                      "properties": {
+                        "claimId": {
+                          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+                        },
+                        "type": {
+                          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/claimType"
+                        },
+                        "normalizedClaim": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 600
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 280
+                        },
+                        "material": {
+                          "type": "boolean"
+                        },
+                        "sensitive": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "maxItems": 6,
+                    "minItems": 1
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "claimId",
+                  "value",
+                  "authority",
+                  "relevant",
+                  "validThrough",
+                  "context"
+                ],
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "observation"
+                  },
+                  "claimId": {
+                    "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+                  },
+                  "value": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 280
+                  },
+                  "authority": {
+                    "type": "string",
+                    "enum": [
+                      "primary",
+                      "credible",
+                      "weak"
+                    ]
+                  },
+                  "relevant": {
+                    "type": "boolean"
+                  },
+                  "validThrough": {
+                    "anyOf": [
+                      {
+                        "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/date"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "context": {
+                    "type": "string",
+                    "enum": [
+                      "full",
+                      "minor_omission",
+                      "material_omission",
+                      "misleading"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "maxItems": 48
+    }
+  }
+}

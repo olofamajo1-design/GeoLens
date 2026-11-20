@@ -1,6 +1,8 @@
 import { validateFixtureOutput, validateFixtureTask } from "./generated/validators.mjs";
 import { fixturePrompts } from "./generated/prompts.mjs";
 import type { AgentId } from "./registry";
+import { isResearchStage, researchDisposition, validateResearchInput, validateResearchResult } from "./research/contracts.ts";
+import type { ResearchInput, ResearchResult } from "./research/types";
 
 const stageAgents = {
   discovery: "GL-AGENT-002", history: "GL-AGENT-003", verification: "GL-AGENT-004",
@@ -35,6 +37,7 @@ export interface FixtureTask {
 
 export interface Claim {
   task: FixtureTask;
+  researchInput?: ResearchInput;
   promptVersion: number;
   promptDigest: string;
   model: string;
@@ -46,10 +49,11 @@ export interface Claim {
 export type Failure = "invalid_input" | "invalid_output" | "provider_error" | "usage_limit" | "timeout";
 export type AttemptResult =
   | { failure: Failure }
-  | { output: FixtureOutput; inputTokens: number; outputTokens: number };
+  | { output: FixtureOutput; inputTokens: number; outputTokens: number; researchResult?: ResearchResult };
 
 export type FixtureProvider = (args: {
   task: FixtureTask;
+  researchInput?: ResearchInput;
   instructions: string;
   model: string;
   maxOutputTokens: number;
@@ -64,7 +68,7 @@ function validOutcome(value: unknown, stage: Stage): value is FixtureOutput {
 }
 
 export async function executeFixture(claim: Claim, provider: FixtureProvider): Promise<AttemptResult> {
-  const { task } = claim;
+  const { task, researchInput } = claim;
   if (!validateFixtureTask(task) || stageAgents[task.stage] !== task.agentId
     || task.dependencies.some(({ stage, result }) => !validOutcome(result, stage) || result.disposition !== "complete")
     || (task.revisionRequest !== null
@@ -74,6 +78,12 @@ export async function executeFixture(claim: Claim, provider: FixtureProvider): P
   const prompt = fixturePrompts.find(({ agentId, version, digest }) =>
     agentId === task.agentId && version === claim.promptVersion && digest === claim.promptDigest);
   if (!prompt) return { failure: "invalid_input" };
+  let research: ResearchInput | undefined;
+  if (researchInput !== undefined) {
+    if (prompt.version < 2 || !isResearchStage(task.stage) || !validateResearchInput(task.stage, researchInput)
+      || researchInput.attemptId !== task.attemptId || researchInput.eventId !== task.eventId) return { failure: "invalid_input" };
+    research = researchInput;
+  }
 
   const remaining = Date.parse(claim.leaseExpiresAt) - Date.now();
   if (!Number.isFinite(remaining) || remaining <= 0) return { failure: "timeout" };
@@ -82,7 +92,7 @@ export async function executeFixture(claim: Claim, provider: FixtureProvider): P
   try {
     const result = await Promise.race([
       provider({
-        task, instructions: prompt.text, model: claim.model,
+        task, researchInput: research, instructions: prompt.text, model: claim.model,
         maxOutputTokens: claim.maxOutputTokens, signal: controller.signal,
       }),
       new Promise<never>((_, reject) => {
@@ -93,6 +103,17 @@ export async function executeFixture(claim: Claim, provider: FixtureProvider): P
       }),
     ]);
     const { output, inputTokens, outputTokens } = result;
+    if (research) {
+      if (!validateResearchResult(research, output)) return { failure: "invalid_output" };
+      if (!withinLimit(inputTokens, claim.maxInputTokens) || !withinLimit(outputTokens, claim.maxOutputTokens)) {
+        return { failure: "usage_limit" };
+      }
+      return {
+        researchResult: output, inputTokens, outputTokens,
+        output: { synthetic: true, disposition: researchDisposition(output),
+          summary: "Synthetic " + output.stage + " finding assessed.", revisionStage: null },
+      };
+    }
     if (!validOutcome(output, task.stage)) return { failure: "invalid_output" };
     if (!withinLimit(inputTokens, claim.maxInputTokens) || !withinLimit(outputTokens, claim.maxOutputTokens)) {
       return { failure: "usage_limit" };

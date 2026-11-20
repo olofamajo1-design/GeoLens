@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.geolens.invalid/newsroom/discovery-output.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stage",
+    "contractVersion",
+    "synthetic",
+    "eventId",
+    "attemptId",
+    "sourceRegister",
+    "headline",
+    "summary",
+    "locations",
+    "entities",
+    "scope",
+    "independentSourceCount",
+    "duplicateGroups",
+    "classification",
+    "ranking",
+    "historicalLeads",
+    "evidenceGaps",
+    "recommendation"
+  ],
+  "properties": {
+    "stage": {
+      "type": "string",
+      "const": "discovery"
+    },
+    "contractVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "synthetic": {
+      "type": "boolean",
+      "const": true
+    },
+    "eventId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "attemptId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "sourceRegister": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/idList"
+    },
+    "headline": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 400
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 600
+    },
+    "locations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "country"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          }
+        }
+      },
+      "maxItems": 24
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+      },
+      "maxItems": 48,
+      "uniqueItems": true
+    },
+    "scope": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/scope"
+    },
+    "independentSourceCount": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 24
+    },
+    "duplicateGroups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "documentIds"
+        ],
+        "properties": {
+          "documentIds": {
+            "type": "array",
+            "items": {
+              "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+            },
+            "maxItems": 24,
+            "minItems": 2,
+            "uniqueItems": true
+          }
+        }
+      },
+      "maxItems": 12
+    },
+    "classification": {
+      "type": "string",
+      "enum": [
+        "breaking",
+        "developing",
+        "trending",
+        "underreported",
+        "unclassified"
+      ]
+    },
+    "ranking": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "components",
+        "priority",
+        "rationale"
+      ],
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "components": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/scores"
+        },
+        "priority": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/priority"
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 600
+        }
+      }
+    },
+    "historicalLeads": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 600
+      },
+      "maxItems": 48
+    },
+    "evidenceGaps": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 600
+      },
+      "maxItems": 48
+    },
+    "recommendation": {
+      "type": "string",
+      "enum": [
+        "investigate",
+        "urgent_verification",
+        "monitor",
+        "archive"
+      ]
+    }
+  }
+}
