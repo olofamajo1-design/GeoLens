@@ -3,5 +3,22 @@
   "name": "geolens-foundation",
   "main": "./workers/entry.ts",
   "compatibility_date": "2026-11-20",
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "vars": {
+    "DISCOVERY_MODE": "disabled"
+  },
+  "triggers": {
+    "crons": [
+      "*/15 * * * *"
+    ]
+  },
+  "workflows": [
+    {
+      "name": "geolens-discovery",
+      "binding": "DISCOVERY",
+      "class_name": "DiscoveryWorkflow"
+    }
+  ]
 }
