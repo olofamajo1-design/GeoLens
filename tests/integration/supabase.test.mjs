@@ -1,17 +1,69 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createHash, createHmac, randomUUID } from "node:crypto";
+import { once } from "node:events";
 import { test } from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
 
 const project = "geolens-security";
 const cli = process.env.GEOLENS_SUPABASE_CLI ?? "supabase";
 const localApi = "http://127.0.0.1:54321";
 
+const psql = [
+  "exec", "-i", "supabase_db_" + project, "psql", "-X", "-U", "postgres",
+  "-v", "ON_ERROR_STOP=1", "-qAt",
+];
+
 function sql(query) {
-  return execFileSync("docker", [
-    "exec", "-i", "supabase_db_" + project, "psql", "-X", "-U", "postgres",
-    "-v", "ON_ERROR_STOP=1", "-qAt",
-  ], { input: query, encoding: "utf8" }).trim();
+  return execFileSync("docker", psql, { input: query, encoding: "utf8" }).trim();
+}
+
+async function withOpenTransaction(query, run) {
+  const name = "geolens-race-" + randomUUID();
+  const connection = spawn("docker", psql);
+  const closed = once(connection, "close");
+  let errors = "";
+  connection.stdout.resume();
+  connection.stderr.setEncoding("utf8").on("data", (chunk) => { errors += chunk; });
+  // A failed SQL statement can close stdin before cleanup sends ROLLBACK.
+  connection.stdin.on("error", () => {});
+  function finish(action) {
+    connection.stdin.end(action + ";\n\\q\n");
+  }
+  try {
+    connection.stdin.write(`begin; set local idle_in_transaction_session_timeout = '15s';
+      ${query}
+      set local application_name = ${sqlValue(name)};
+`);
+    const deadline = Date.now() + 4000;
+    while (Date.now() < deadline && connection.exitCode === null) {
+      const ready = sql(`select exists (select 1 from pg_stat_activity
+        where application_name = ${sqlValue(name)} and state = 'idle in transaction');`);
+      if (ready === "t") {
+        return await run(async () => {
+          finish("commit");
+          assert.equal((await closed)[0], 0, errors);
+        });
+      }
+      await delay(30);
+    }
+    assert.fail("Could not stage concurrent database operation: " + errors);
+  } finally {
+    if (!connection.stdin.writableEnded) finish("rollback");
+    await closed;
+  }
+}
+
+async function waitForBlockedRequests(name, count = 1) {
+  const deadline = Date.now() + 4000;
+  while (Date.now() < deadline) {
+    const blocked = Number(sql(`select count(*) from pg_stat_activity
+      where pid <> pg_backend_pid() and wait_event_type = 'Lock'
+        and usename = 'authenticator' and query like ${sqlValue("%" + name + "%")};`));
+    if (blocked >= count) return;
+    await delay(30);
+  }
+  assert.fail(`Expected ${count} ${name} request(s) waiting for a database lock`);
 }
 
 function sqlValue(value) {
@@ -184,48 +236,55 @@ test("local Supabase enforces GeoLens Auth, editorial and Storage boundaries", {
     assert.deepEqual(listed, []);
   });
 
-  const slug = "synthetic-" + randomUUID();
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/FEkAAAAASUVORK5CYII=", "base64");
-  const digest = createHash("sha256").update(png).digest("hex");
-  const objectKey = "synthetic/" + randomUUID() + ".png";
-  success(await request("/storage/v1/object/editorial-private/" + objectKey, {
-    admin: true, method: "POST", contentType: "image/png", body: png,
-    headers: { "Cache-Control": "no-store" },
-  }), "store synthetic editorial media");
 
-  const fixture = JSON.parse(sql(`
-    begin;
-    create temporary table fixture(key text primary key, id uuid);
-    with inserted as (insert into editorial.stories(slug, synthetic) values (${sqlValue(slug)}, true) returning id)
-      insert into fixture select 'story', id from inserted;
-    with inserted as (insert into news.sources(name) values (${sqlValue(slug)}) returning id)
-      insert into fixture select 'source', id from inserted;
-    with inserted as (insert into news.source_permissions(source_id, attribution, valid_from)
-      select id, 'Synthetic citation', now()-interval '1 day' from fixture where key='source' returning id)
-      insert into fixture select 'permission', id from inserted;
-    with inserted as (insert into news.documents(source_id, external_reference, digest)
-      select id, 'synthetic-source', extensions.digest('fictional document','sha256') from fixture where key='source' returning id)
-      insert into fixture select 'document', id from inserted;
-    with inserted as (insert into media.assets(label) values ('Synthetic media') returning id)
-      insert into fixture select 'asset', id from inserted;
-    with inserted as (insert into media.asset_versions(asset_id, version, object_key, digest, storage_version)
-      select f.id, 1, o.name, decode(${sqlValue(digest)}, 'hex'), o.version
-      from fixture f cross join storage.objects o
-      where f.key='asset' and o.bucket_id='editorial-private' and o.name=${sqlValue(objectKey)} returning id)
-      insert into fixture select 'media', id from inserted;
-    with inserted as (insert into media.licences(asset_id, terms, valid_from)
-      select id, 'Synthetic licence', now()-interval '1 day' from fixture where key='asset' returning id)
-      insert into fixture select 'licence', id from inserted;
-    select jsonb_object_agg(key,id) from fixture;
-    commit;
-  `));
+  async function editorialFixture() {
+    const slug = "synthetic-" + randomUUID();
+    const digest = createHash("sha256").update(png).digest("hex");
+    const objectKey = "synthetic/" + randomUUID() + ".png";
+    success(await request("/storage/v1/object/editorial-private/" + objectKey, {
+      admin: true, method: "POST", contentType: "image/png", body: png,
+      headers: { "Cache-Control": "no-store" },
+    }), "store synthetic editorial media");
 
-  function seal(title, includeMedia = true) {
+    const fixture = JSON.parse(sql(`
+      begin;
+      create temporary table fixture(key text primary key, id uuid);
+      with inserted as (insert into editorial.stories(slug, synthetic) values (${sqlValue(slug)}, true) returning id)
+        insert into fixture select 'story', id from inserted;
+      with inserted as (insert into news.sources(name) values (${sqlValue(slug)}) returning id)
+        insert into fixture select 'source', id from inserted;
+      with inserted as (insert into news.source_permissions(source_id, attribution, valid_from)
+        select id, 'Synthetic citation', now()-interval '1 day' from fixture where key='source' returning id)
+        insert into fixture select 'permission', id from inserted;
+      with inserted as (insert into news.documents(source_id, external_reference, digest)
+        select id, 'synthetic-source', extensions.digest('fictional document','sha256') from fixture where key='source' returning id)
+        insert into fixture select 'document', id from inserted;
+      with inserted as (insert into media.assets(label) values ('Synthetic media') returning id)
+        insert into fixture select 'asset', id from inserted;
+      with inserted as (insert into media.asset_versions(asset_id, version, object_key, digest, storage_version)
+        select f.id, 1, o.name, decode(${sqlValue(digest)}, 'hex'), o.version
+        from fixture f cross join storage.objects o
+        where f.key='asset' and o.bucket_id='editorial-private' and o.name=${sqlValue(objectKey)} returning id)
+        insert into fixture select 'media', id from inserted;
+      with inserted as (insert into media.licences(asset_id, terms, valid_from)
+        select id, 'Synthetic licence', now()-interval '1 day' from fixture where key='asset' returning id)
+        insert into fixture select 'licence', id from inserted;
+      select jsonb_object_agg(key,id) from fixture;
+      commit;
+    `));
+    return { ...fixture, slug, digest, objectKey };
+  }
+
+  const fixture = await editorialFixture();
+  const { slug, digest, objectKey } = fixture;
+
+  function seal(title, includeMedia = true, fixtureForStory = fixture) {
     const id = sql(`
-      select editorial.seal_version(${sqlValue(fixture.story)}, jsonb_build_object('title',${sqlValue(title)},'body','Fictional article'),
-        jsonb_build_array(jsonb_build_object('document_id',${sqlValue(fixture.document)},'permission_id',${sqlValue(fixture.permission)})),
+      select editorial.seal_version(${sqlValue(fixtureForStory.story)}, jsonb_build_object('title',${sqlValue(title)},'body','Fictional article'),
+        jsonb_build_array(jsonb_build_object('document_id',${sqlValue(fixtureForStory.document)},'permission_id',${sqlValue(fixtureForStory.permission)})),
         case when ${includeMedia} then
-          jsonb_build_array(jsonb_build_object('asset_version_id',${sqlValue(fixture.media)},'licence_id',${sqlValue(fixture.licence)}))
+          jsonb_build_array(jsonb_build_object('asset_version_id',${sqlValue(fixtureForStory.media)},'licence_id',${sqlValue(fixtureForStory.licence)}))
           else '[]'::jsonb end);
     `);
     return JSON.parse(sql(`select jsonb_build_object('id',id,'digest',encode(digest,'hex'))
@@ -348,6 +407,109 @@ test("local Supabase enforces GeoLens Auth, editorial and Storage boundaries", {
     assert.equal(sql(`select count(*) from governance.audit_events where action='publication.released'
       and target_id in (${sqlValue(publication)}, ${sqlValue(replacement)});`), "2");
     assert.equal(sql(`select count(*) from editorial.corrections where story_id=${sqlValue(fixture.story)};`), "1");
+  });
+
+  async function approvedFixture(title) {
+    const story = await editorialFixture();
+    const version = seal(title, true, story);
+    await reviews(version);
+    success(await rpc("decide_version", { ...target(version), approve: true }, elevated), "approve race fixture");
+    return { story, version };
+  }
+
+  function releaseCounts(storyId) {
+    return JSON.parse(sql(`
+      select jsonb_build_object(
+        'rows', count(*),
+        'active', count(*) filter (where withdrawn_at is null),
+        'audit', (select count(*) from governance.audit_events e
+          join editorial.publications p on p.id = e.target_id
+          where p.story_id = ${sqlValue(storyId)} and e.action = 'publication.released')
+      ) from editorial.publications where story_id = ${sqlValue(storyId)};
+    `));
+  }
+
+  await t.test("simultaneous releases with different keys commit exactly one publication", async () => {
+    const { story, version } = await approvedFixture("Synthetic competing release");
+    const competingVersion = seal("Synthetic alternative release", true, story);
+    await reviews(competingVersion);
+    success(await rpc("decide_version", { ...target(competingVersion), approve: true }, elevated), "approve competing version");
+    const versions = [version, competingVersion];
+    const operations = [randomUUID(), randomUUID()];
+    const outcomes = await withOpenTransaction(
+      `select id from editorial.stories where id = ${sqlValue(story.story)} for update;`,
+      async (commit) => {
+        const pending = Promise.allSettled(operations.map((operation_id, index) =>
+          rpc("release_version", { ...target(versions[index]), operation_id }, elevated)));
+        await waitForBlockedRequests("release_version", 2);
+        await commit();
+        return (await pending).map((outcome) => {
+          if (outcome.status === "rejected") throw outcome.reason;
+          return outcome.value;
+        });
+      },
+    );
+    const winner = outcomes.findIndex((outcome) => outcome.ok);
+    assert.notEqual(winner, -1, "one competing operation succeeds");
+    assert.equal(outcomes.filter((outcome) => outcome.ok).length, 1);
+    assert.equal(outcomes[1 - winner].data.message, "Existing release requires a correction");
+    const stored = JSON.parse(sql(`select jsonb_build_object('request', request_id, 'version', version_id)
+      from editorial.publications where story_id = ${sqlValue(story.story)};`));
+    assert.deepEqual(stored, { request: operations[winner], version: versions[winner].id });
+    assert.deepEqual(releaseCounts(story.story), { rows: 1, active: 1, audit: 1 });
+  });
+
+  await t.test("publication and concurrent rights revocation serialize in both orders", async () => {
+    // Hold one real RPC transaction open as the founder while the competing
+    // request enters through PostgREST. These claims come from verified local MFA.
+    const claims = JSON.parse(Buffer.from(elevated.split(".")[1], "base64url"));
+    const asFounder = `set local role authenticated;
+      select set_config('request.jwt.claims', ${sqlValue(JSON.stringify(claims))}, true) is not null;`;
+
+    async function assertGuestDenied(story) {
+      const args = { story_slug: story.slug };
+      assert.deepEqual(success(await rpc("published_story", args), "guest article after revocation"), []);
+      assert.deepEqual(success(await rpc("publication_media", {
+        ...args, position_number: 1,
+      }), "guest media metadata after revocation"), []);
+      assert.equal((await request("/storage/v1/object/authenticated/editorial-private/" + story.objectKey)).ok,
+        false, "guest cannot retrieve revoked media bytes");
+    }
+
+    const sourceRace = await approvedFixture("Synthetic source revocation wins");
+    const sourceResult = await withOpenTransaction(`${asFounder}
+      select geo_api.revoke_right('source', ${sqlValue(sourceRace.story.permission)}, 'Synthetic concurrent revocation');`,
+    async (commit) => {
+      const pending = rpc("release_version", {
+        ...target(sourceRace.version), operation_id: randomUUID(),
+      }, elevated).catch((error) => ({ error }));
+      await waitForBlockedRequests("release_version");
+      await commit();
+      return pending;
+    });
+    assert.equal(sourceResult.ok, false);
+    assert.equal(sourceResult.data.message, "Active rights required");
+    assert.deepEqual(releaseCounts(sourceRace.story.story), { rows: 0, active: 0, audit: 0 });
+    await assertGuestDenied(sourceRace.story);
+
+    const mediaRace = await approvedFixture("Synthetic publication wins before licence revocation");
+    const operation = randomUUID();
+    await withOpenTransaction(`${asFounder}
+      select geo_api.release_version(${sqlValue(mediaRace.version.id)}, ${sqlValue(mediaRace.version.digest)}, ${sqlValue(operation)});`,
+    async (commit) => {
+      const pending = rpc("revoke_right", {
+        right_kind: "media", right_id: mediaRace.story.licence, reason_text: "Synthetic concurrent revocation",
+      }, elevated).catch((error) => ({ error }));
+      await waitForBlockedRequests("revoke_right");
+      await commit();
+      success(await pending, "concurrent licence revocation");
+    });
+    assert.equal(sql(`select request_id from editorial.publications
+      where story_id = ${sqlValue(mediaRace.story.story)};`), operation);
+    assert.deepEqual(releaseCounts(mediaRace.story.story), { rows: 1, active: 1, audit: 1 });
+    assert.equal(sql(`select count(*) from governance.audit_events
+      where action = 'rights.revoked' and target_id = ${sqlValue(mediaRace.story.licence)};`), "1");
+    await assertGuestDenied(mediaRace.story);
   });
 
   await t.test("SQL grants, immutable snapshots, and live role revocation", async () => {
