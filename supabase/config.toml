@@ -1,0 +1,55 @@
+project_id = "geolens-security"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["geo_api"]
+extra_search_path = ["extensions"]
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.seed]
+enabled = false
+
+[realtime]
+enabled = false
+
+[studio]
+enabled = false
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "1MiB"
+
+[storage.s3_protocol]
+enabled = false
+
+[auth]
+enable_signup = false
+enabled = true
+site_url = "http://127.0.0.1:5173"
+additional_redirect_urls = []
+
+[auth.email]
+enable_signup = true
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false
+
+[auth.email.template.magic_link]
+subject = "GeoLens local sign-in code"
+content_path = "./supabase/templates/magic-link.html"
