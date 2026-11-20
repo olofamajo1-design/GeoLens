@@ -35,3 +35,7 @@ Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` if an installed Chromium should be used. Se
 ## Local database security
 
 See [Milestone 2 database security](docs/architecture/database-security.md) for the migration model and the disposable Supabase Auth, Storage, and authorization tests.
+
+## Local news discovery pilot
+
+See the [discovery pilot guide](docs/architecture/news-ingestion.md) for source permissions, restricted egress, fixture commands, and budget controls.

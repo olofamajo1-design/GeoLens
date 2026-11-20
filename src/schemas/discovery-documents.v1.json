@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "array",
+  "maxItems": 10,
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "externalReference": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2048
+      },
+      "originalUrl": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "maxLength": 2048
+      },
+      "canonicalUrl": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "maxLength": 2048
+      },
+      "title": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 400
+      },
+      "occurredAt": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "maxLength": 32
+      },
+      "language": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "maxLength": 40
+      },
+      "digest": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      },
+      "fingerprint": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      },
+      "origin": {
+        "enum": [
+          "reuters",
+          "associated-press",
+          "world-bank",
+          null
+        ]
+      },
+      "location": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "country"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          }
+        }
+      },
+      "entities": {
+        "type": "array",
+        "maxItems": 12,
+        "items": {
+          "type": "string",
+          "maxLength": 80
+        }
+      },
+      "cluster": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "maxLength": 160
+      },
+      "timeBasis": {
+        "enum": [
+          "observed",
+          "published",
+          null
+        ]
+      },
+      "observation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "country",
+          "indicator",
+          "year",
+          "value"
+        ],
+        "properties": {
+          "country": {
+            "const": "NGA"
+          },
+          "indicator": {
+            "const": "SP.POP.TOTL"
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 1960,
+            "maximum": 9999
+          },
+          "value": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        }
+      }
+    },
+    "required": [
+      "externalReference",
+      "originalUrl",
+      "canonicalUrl",
+      "title",
+      "occurredAt",
+      "language",
+      "digest",
+      "fingerprint",
+      "origin",
+      "location",
+      "entities",
+      "cluster",
+      "timeBasis"
+    ]
+  }
+}
