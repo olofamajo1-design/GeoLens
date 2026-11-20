@@ -193,6 +193,8 @@ test("local Supabase enforces GeoLens Auth, editorial and Storage boundaries", {
     assert.equal((await verify(code === "000000" ? "111111" : "000000")).ok, false);
     elevated = success(await verify(code), "TOTP verification").access_token;
     assert.equal(JSON.parse(Buffer.from(elevated.split(".")[1], "base64url")).aal, "aal2");
+    assert.equal((await rpc("newsroom_fixture_review_queue", {}, founder.token)).status, 403);
+    assert.ok(Array.isArray(success(await rpc("newsroom_fixture_review_queue", {}, elevated), "MFA fixture review queue")));
     assert.equal((await rpc("set_role", { target_user: other.id, role_code: "human_editor", enabled: true }, founder.token)).status, 403);
     assert.equal((await rpc("set_role", { target_user: other.id, role_code: "human_editor", enabled: true }, other.token)).status, 403);
   });

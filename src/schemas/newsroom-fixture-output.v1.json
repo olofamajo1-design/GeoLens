@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.geolens.invalid/newsroom-fixture-output.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["synthetic", "disposition", "summary", "revisionStage"],
+  "properties": {
+    "synthetic": { "type": "boolean", "const": true },
+    "disposition": { "type": "string", "enum": ["complete", "incomplete", "critical", "revision_requested"] },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 250 },
+    "revisionStage": { "type": ["string", "null"], "enum": [null, "writing", "visual"] }
+  }
+}

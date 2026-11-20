@@ -5,6 +5,7 @@ import { fixturePayloads } from "../../src/ingestion/fixtures";
 import { normalize } from "../../src/ingestion/normalize";
 import { validateDiscovery } from "../../src/newsroom/generated/validators.mjs";
 import { fixtureStore } from "../../src/ingestion/store";
+import { dispatchNewsroomScan } from "./newsroom";
 
 type ScheduledDiscovery = { cycle: string };
 type DiscoveryRun = { id: string; adapter: Adapter; fixture: boolean };
@@ -20,6 +21,7 @@ export class DiscoveryWorkflow extends WorkflowEntrypoint<Env, ScheduledDiscover
   async run(event: WorkflowEvent<ScheduledDiscovery>, step: WorkflowStep) {
     const rpc = discoveryStore(this.env);
     const due = await step.do("list due sources", stepOptions, () => rpc<string[]>("due_discovery", {}));
+    let completedFixture = false;
     for (const endpoint of due) {
       const run = await step.do("begin " + endpoint, stepOptions, () => rpc<DiscoveryRun | null>("begin_discovery", {
         source_endpoint: endpoint, cycle_time: event.payload.cycle,
@@ -36,9 +38,16 @@ export class DiscoveryWorkflow extends WorkflowEntrypoint<Env, ScheduledDiscover
           return { documents: [], failure: "invalid_payload" };
         }
       });
-      await step.do("finish " + endpoint, stepOptions, () => rpc<string>("finish_discovery", {
+      const state = await step.do("finish " + endpoint, stepOptions, () => rpc<string>("finish_discovery", {
         target_run: run.id, ...normalized,
       }));
+      if (state === "complete") completedFixture = true;
+    }
+    if (completedFixture && this.env.NEWSROOM_MODE === "fixture") {
+      await step.do("reassess newsroom after discovery", stepOptions, async () => {
+        await dispatchNewsroomScan(this.env, "discovery-" + Date.parse(event.payload.cycle));
+        return null;
+      });
     }
   }
 }

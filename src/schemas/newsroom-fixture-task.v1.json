@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.geolens.invalid/newsroom-fixture-task.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contractVersion", "synthetic", "runId", "eventId", "taskId", "attemptId", "agentId", "stage", "round", "attempt", "verificationAttention", "dependencies", "revisionRequest"],
+  "properties": {
+    "contractVersion": { "type": "integer", "const": 1 },
+    "synthetic": { "type": "boolean", "const": true },
+    "runId": { "$ref": "#/$defs/id" },
+    "eventId": { "$ref": "#/$defs/id" },
+    "taskId": { "$ref": "#/$defs/id" },
+    "attemptId": { "$ref": "#/$defs/id" },
+    "agentId": { "type": "string", "pattern": "^GL-AGENT-00[2-8]$" },
+    "stage": { "$ref": "#/$defs/stage" },
+    "round": { "type": "integer", "minimum": 0, "maximum": 4 },
+    "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+    "verificationAttention": { "type": "boolean" },
+    "revisionRequest": { "anyOf": [{ "type": "null" }, { "$ref": "https://schemas.geolens.invalid/newsroom-fixture-output.v1.json" }] },
+    "dependencies": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["taskId", "stage", "result"],
+        "properties": {
+          "taskId": { "$ref": "#/$defs/id" },
+          "stage": { "$ref": "#/$defs/stage" },
+          "result": { "$ref": "https://schemas.geolens.invalid/newsroom-fixture-output.v1.json" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$" },
+    "stage": { "type": "string", "enum": ["discovery", "history", "verification", "analysis", "writing", "visual", "reverification", "editorial"] }
+  }
+}
