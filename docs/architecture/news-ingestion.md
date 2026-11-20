@@ -2,6 +2,13 @@
 
 Milestone 4 keeps discovery private. It writes source metadata, candidate events, and ranking snapshots. The reader, factual verification, and human publication gate retain their existing permissions.
 
+## Milestone 4 completion and release gate
+
+- **Infrastructure** is complete when the local foundation, browser, database, and Cron/Workflow suites pass. The local tests use synthetic provider responses to exercise ingestion, persistence, deduplication, attribution, retention, and editorial isolation.
+- **Live source activation** is an outstanding integration and release requirement. Verify the applicable GDELT and World Bank terms, use a restricted network route that can verify the actual provider IP, and demonstrate a successful live run for each approved source. Record retrieval, persistence, replay and deduplication, attribution, and errors before clearing the release gate.
+
+Keep all live endpoints disabled until securely validated. Premium Times remains outside the approved pilot. Retain the existing DNS, TLS peer, quota, retention, and publication controls during validation.
+
 ## Permission review and restricted egress
 
 The live pilot is limited to GDELT and the approved World Bank indicator. Both endpoints remain disabled by default. An active acquisition licence and a time-limited grant for a dedicated ingestion operator are required. Premium Times remains disabled and cannot be selected by the pilot runner.
