@@ -16,13 +16,23 @@ test("the built Worker serves health and renders the synthetic newsroom", { time
   const closed = once(server, "close");
 
   try {
-    for (let attempt = 0; attempt < 120 && !logs.includes(baseUrl); attempt += 1) {
-      if (server.exitCode !== null) break;
-      await delay(250);
+    // Probe the Worker itself. Vite's URL banner varies with terminal formatting.
+    const startupSignal = AbortSignal.timeout(30_000);
+    let health;
+    while (!startupSignal.aborted && server.exitCode === null && server.signalCode === null) {
+      try {
+        health = await fetch(baseUrl + "/health", { signal: startupSignal });
+        break;
+      } catch (error) {
+        if (startupSignal.aborted) break;
+        if (error.cause?.code !== "ECONNREFUSED") {
+          throw new Error("Worker preview readiness request failed:\n" + logs, { cause: error });
+        }
+        await delay(250);
+      }
     }
 
-    assert.ok(logs.includes(baseUrl), "Worker preview failed to start:\n" + logs);
-    const health = await fetch(baseUrl + "/health", { signal: AbortSignal.timeout(5000) });
+    assert.ok(health, "Worker preview did not answer /health:\n" + logs);
     assert.equal(health.status, 200);
     assert.deepEqual(await health.json(), { status: "ok", mode: "synthetic" });
 
