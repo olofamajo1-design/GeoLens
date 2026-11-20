@@ -61,3 +61,16 @@ Documents keep a source-specific reference, SHA-256 version digest, credited ori
 The evidence score groups recognized origins connected by duplicate fingerprints. Unknown origin contributes no independent corroboration. A credited origin is an input to triage, with no independent verification of authorship. Ranking stores the five component scores and rule version. Impact and historical significance use provisional headline cues, urgency uses provider timestamps, and regional relevance prioritizes Nigeria. The total uses the approved 30/25/20/15/10 weights. Without a recognized origin the event remains in review with no total score. Breaking, trending and developing are prioritization labels for discovery.
 
 The private health query exposes cadence, consecutive failures, latest error and last success. The monthly budget query reports recorded USD minor units, claimed discovery cycles, applicable alerts, and whether the ceiling was reached. The dedicated ingestion role cannot change cost observations. An MFA-enabled super administrator can reconcile absolute month-to-date spend. Development alerts are $35 and $45 and the $50 ceiling stops new fixture cycles. Launch alerts are $210, $250 and $270 with a blocked status at $300. No current path authorizes provider charges. Hosted usage reconciliation, alert delivery, and the enforcement hook for future launch spending remain part of live activation.
+
+## Live pilot recheck — 20 November 2026
+
+The connected runtime reported current and enforced restricted networking at revision 35, with neither provider hostname in its custom allowlist. The configuration draft for this chat also listed no custom rules. Read-only probes to both API endpoints returned HTTP 403 from the CONNECT proxy, before an origin HTTP response. The GDELT licensing page, World Bank dataset terms, and approved indicator page were also blocked, so source permissions could not be verified in this runtime.
+
+| Source | Live records retrieved | Live rows inserted | Live deduplication and attribution |
+|---|---:|---:|---|
+| GDELT | 0 | 0 | Not exercised |
+| World Bank `SP.POP.TOTL`, Nigeria | 0 | 0 | Not exercised |
+
+The pilot command exited 1 with `proxy_peer_unverifiable` for each provider before issuing a GET. Supabase showed no new pilot runs or documents. The five pre-existing run rows came from synthetic tests. All live endpoints were disabled, including Premium Times. No paid API calls or publications occurred.
+
+Apply the two exact grants to the environment attached to this task and verify the enforced rules. Origin reachability alone does not verify the connected provider IP through hostname-only CONNECT. Live ingestion requires a supported restricted route that satisfies the peer checks and access to verify the applicable source terms.
