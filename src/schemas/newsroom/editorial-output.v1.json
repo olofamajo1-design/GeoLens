@@ -122,53 +122,7 @@
     "issues": {
       "type": "array",
       "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "code",
-          "severity",
-          "agentId",
-          "instruction"
-        ],
-        "properties": {
-          "code": {
-            "type": "string",
-            "enum": [
-              "rights",
-              "privacy",
-              "security",
-              "unverified_claim",
-              "invalid_grounding",
-              "missing_history",
-              "missing_analysis",
-              "missing_visuals",
-              "source_balance",
-              "below_threshold"
-            ]
-          },
-          "severity": {
-            "type": "string",
-            "enum": [
-              "critical",
-              "major",
-              "minor"
-            ]
-          },
-          "agentId": {
-            "type": "string",
-            "enum": [
-              "GL-AGENT-004",
-              "GL-AGENT-006",
-              "GL-AGENT-007",
-              "GL-AGENT-008"
-            ]
-          },
-          "instruction": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 320
-          }
-        }
+        "$ref": "https://schemas.geolens.invalid/newsroom/production-common.v1.json#/$defs/revisionIssue"
       },
       "minItems": 0,
       "maxItems": 16

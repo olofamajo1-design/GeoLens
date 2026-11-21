@@ -236,6 +236,9 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 12000
+        },
+        "metadata": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/production-common.v1.json#/$defs/articleMetadata"
         }
       }
     },
@@ -711,15 +714,48 @@
               "enum": [
                 "active",
                 "missing",
-                "revoked"
+                "revoked",
+                "expired"
               ]
             },
             "reference": {
               "type": "string",
               "minLength": 1,
               "maxLength": 160
+            },
+            "terms": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 400
+            },
+            "validUntil": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           }
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 320
+        },
+        "snapshot": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/production-common.v1.json#/$defs/visualSnapshot"
+        },
+        "quality": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/production-common.v1.json#/$defs/visualQuality"
         }
       }
     },
@@ -761,6 +797,350 @@
       "minItems": 0,
       "maxItems": 5,
       "uniqueItems": true
+    },
+    "wordCountGuideline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "minWords",
+        "maxWords",
+        "allowsLonger"
+      ],
+      "properties": {
+        "minWords": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12000
+        },
+        "maxWords": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12000
+        },
+        "allowsLonger": {
+          "type": "boolean"
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 80
+      },
+      "minItems": 0,
+      "maxItems": 12,
+      "uniqueItems": true
+    },
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "category",
+        "tags"
+      ],
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "nigeria",
+            "africa",
+            "world"
+          ]
+        },
+        "tags": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/production-common.v1.json#/$defs/tags"
+        }
+      }
+    },
+    "articleMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "seoTitle",
+        "seoDescription",
+        "categories",
+        "tags",
+        "socialSummary",
+        "wordCountGuideline"
+      ],
+      "properties": {
+        "seoTitle": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "seoDescription": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "nigeria",
+              "africa",
+              "world",
+              "history",
+              "geopolitics",
+              "factcheck"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true
+        },
+        "tags": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/production-common.v1.json#/$defs/tags"
+        },
+        "socialSummary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "wordCountGuideline": {
+          "$ref": "https://schemas.geolens.invalid/newsroom/production-common.v1.json#/$defs/wordCountGuideline"
+        }
+      }
+    },
+    "visualSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capturedAt",
+        "observedOn",
+        "dataDigest"
+      ],
+      "properties": {
+        "capturedAt": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"
+        },
+        "observedOn": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dataDigest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "visualQuality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ratings",
+        "score",
+        "critical"
+      ],
+      "properties": {
+        "ratings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "factual_and_data_accuracy",
+            "geographical_accuracy",
+            "clarity",
+            "editorial_relevance",
+            "accessibility",
+            "attribution_and_licensing",
+            "brand_consistency"
+          ],
+          "properties": {
+            "factual_and_data_accuracy": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "geographical_accuracy": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "clarity": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "editorial_relevance": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "accessibility": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "attribution_and_licensing": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "brand_consistency": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "critical": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "accuracy",
+              "licensing",
+              "security"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 3,
+          "uniqueItems": true
+        }
+      }
+    },
+    "revisionIssue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "severity",
+        "agentId",
+        "instruction"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "rights",
+            "privacy",
+            "security",
+            "unverified_claim",
+            "invalid_grounding",
+            "missing_history",
+            "missing_analysis",
+            "missing_visuals",
+            "source_balance",
+            "below_threshold"
+          ]
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "critical",
+            "major",
+            "minor"
+          ]
+        },
+        "agentId": {
+          "type": "string",
+          "enum": [
+            "GL-AGENT-004",
+            "GL-AGENT-006",
+            "GL-AGENT-007",
+            "GL-AGENT-008"
+          ]
+        },
+        "instruction": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 320
+        },
+        "detail": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "affected",
+            "problem",
+            "evidenceIds",
+            "evidenceGap",
+            "blocksPublication"
+          ],
+          "properties": {
+            "affected": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "ref"
+                ],
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "claim",
+                      "section",
+                      "visual"
+                    ]
+                  },
+                  "ref": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  }
+                }
+              },
+              "minItems": 1,
+              "maxItems": 16
+            },
+            "problem": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 320
+            },
+            "evidenceIds": {
+              "type": "array",
+              "items": {
+                "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+              },
+              "minItems": 0,
+              "maxItems": 48,
+              "uniqueItems": true
+            },
+            "evidenceGap": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 320
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "blocksPublication": {
+              "const": true
+            }
+          }
+        }
+      }
     }
   }
 }

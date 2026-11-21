@@ -3,8 +3,8 @@ import { buildProductionResult, productionDisposition, validateProductionInput, 
 import { reviewEdition, reverifyEdition, weightedScore } from "../../src/newsroom/editorial/review";
 import { articleFormats } from "../../src/newsroom/editorial/types";
 import type { EditorialInput, ReverificationInput, VisualAsset, VisualInput, WritingInput } from "../../src/newsroom/editorial/types";
-import { assembleVisuals } from "../../src/newsroom/editorial/visual";
-import { articleWords, writeArticle } from "../../src/newsroom/editorial/writing";
+import { assembleVisuals, assessVisual, weightedVisualScore } from "../../src/newsroom/editorial/visual";
+import { articleWords, followsWordGuideline, writeArticle } from "../../src/newsroom/editorial/writing";
 import { executeFixture } from "../../src/newsroom/execution";
 import { promptManifest } from "../../src/newsroom/generated/prompts.mjs";
 import { createOpenAIFixtureProvider } from "../../src/providers/openai-fixture.server";
@@ -48,6 +48,27 @@ const checks: ReverificationInput = {
 const editor: EditorialInput = { ...checks, attemptId: fixtureId(100), stage: "editorial", verification: reverifyEdition(checks) };
 
 describe("Stage 5C writing", () => {
+  it("pins sourced metadata and advisory word ranges for all seven formats", () => {
+    const ranges = [[150, 300], [900, 1500], [800, 1500], [1000, 1800], [1500, 3000], [1200, 2500], [500, 900]];
+    for (const [index, format] of articleFormats.entries()) {
+      const input: WritingInput = { ...writing, formats: index < 2 ? writing.formats : [...writing.formats, format],
+        classification: { category: "nigeria", tags: ["Coastal exercise"] } };
+      const output = writeArticle(input);
+      const article = output.articles.find((item) => item.format === format)!;
+      expect(article.metadata).toMatchObject({
+        seoTitle: input.headlines[0], seoDescription: input.standfirst, tags: input.classification!.tags,
+        socialSummary: input.standfirst, wordCountGuideline: {
+          minWords: ranges[index][0], maxWords: ranges[index][1], allowsLonger: format === "investigative_report",
+        },
+      });
+      expect(article.metadata?.categories[0]).toBe("nigeria");
+      expect(validateProductionResult(input, output)).toBe(true);
+      expect(followsWordGuideline({ ...article, wordCount: 3200 })).toBe(format === "investigative_report");
+      article.metadata!.seoTitle = "A headline invented by the model";
+      expect(validateProductionResult(input, output)).toBe(false);
+    }
+  });
+
   it("produces paired drafts with three headlines and the same verified facts, plus all supported formats", () => {
     for (const extra of articleFormats.slice(2)) {
       const input = { ...writing, formats: [...writing.formats, extra] };
@@ -89,6 +110,34 @@ describe("Stage 5C writing", () => {
 });
 
 describe("Stage 5C visuals", () => {
+  it("normalizes applicable weights and excludes a below-threshold visual", () => {
+    const asset: VisualAsset = {
+      ...chart, title: "Households", purpose: "Explain the count", licence: { ...chart.licence, terms: "Fixture", validUntil: null },
+      snapshot: { capturedAt: "2026-11-21T12:00:00.000Z", observedOn: null, dataDigest: chart.digest },
+    };
+    const input: VisualInput = { ...visual, qualityRubric: 1, candidates: [asset] };
+    expect(validateProductionInput("visual", input)).toBe(true);
+    const output = assembleVisuals(input);
+    expect(output.assets[0].quality).toMatchObject({ score: 100, ratings: { geographical_accuracy: null } });
+    expect(weightedVisualScore({ ...assessVisual(asset).ratings, factual_and_data_accuracy: 80 })).toBe(92.5);
+    const lowQuality = { ...asset, alt: "Description ".repeat(16), caption: "Synthetic count ".repeat(13) };
+    expect(assessVisual(lowQuality)).toMatchObject({ score: 80, critical: [] });
+    expect(assembleVisuals({ ...input, candidates: [lowQuality] }).blockedAssetIds).toEqual([asset.id]);
+  });
+
+  it("blocks a passing visual score when rights expire or text is unsafe", () => {
+    const asset: VisualAsset = { ...chart, title: "Households", purpose: "Explain the count",
+      snapshot: { capturedAt: "2026-11-21T12:00:00.000Z", observedOn: null, dataDigest: chart.digest } };
+    const expired: VisualAsset = { ...asset, licence: { ...asset.licence, status: "expired" } };
+    const unsafe: VisualAsset = { ...asset, caption: "An unsafe <script> caption." };
+    const input: VisualInput = { ...visual, qualityRubric: 1 };
+    expect(assessVisual(expired)).toMatchObject({ score: 87.5, critical: ["licensing"] });
+    expect(assessVisual(unsafe)).toMatchObject({ score: 100, critical: ["security"] });
+    for (const candidate of [expired, unsafe]) {
+      expect(assembleVisuals({ ...input, candidates: [candidate] }).assets).toEqual([]);
+    }
+  });
+
   it("preserves source data, rights metadata, responsive design tokens and an accessible fallback", () => {
     const output = assembleVisuals(visual);
     expect(validateProductionResult(visual, output)).toBe(true);
@@ -127,6 +176,19 @@ describe("Stage 5C visuals", () => {
 });
 
 describe("Stage 5C independent editorial assessment", () => {
+  it("binds revision details to the affected section and its available evidence", () => {
+    const input: EditorialInput = { ...structuredClone(editor), reviewSpec: 2 };
+    const article = input.article.articles.find(({ format }) => format === "deep_dive")!;
+    article.sections = article.sections.filter(({ kind }) => kind !== "history");
+    article.wordCount = articleWords(article.standfirst, article.sections.flatMap(({ blocks }) => blocks));
+    const output = reviewEdition(input);
+    expect(output.issues.find(({ code }) => code === "missing_history")).toMatchObject({
+      agentId: "GL-AGENT-006", detail: { affected: [{ kind: "section", ref: "deep_dive:history" }],
+        evidenceIds: [fixtureId(2)], evidenceGap: expect.any(String), problem: expect.any(String), blocksPublication: true },
+    });
+    expect(validateProductionResult(input, output)).toBe(true);
+  });
+
   it("applies the eight approved weights and hands a complete exact version to human review", () => {
     const result = reviewEdition(editor);
     expect(result.decision).toBe("ready_for_human_review");

@@ -3,6 +3,7 @@ export const articleFormats = [
   "investigative_report", "special_feature", "factcheck_report",
 ] as const;
 export type ArticleFormat = typeof articleFormats[number];
+export type EditorialCategory = "nigeria" | "africa" | "world" | "history" | "geopolitics" | "factcheck";
 
 export const sections = ["overview", "facts", "history", "analysis", "scenarios", "limitations"] as const;
 export type Section = typeof sections[number];
@@ -40,6 +41,16 @@ export interface Article {
   standfirst: string;
   sections: { kind: Section; blocks: Material[] }[];
   wordCount: number;
+  metadata?: ArticleMetadata;
+}
+
+export interface ArticleMetadata {
+  seoTitle: string;
+  seoDescription: string;
+  categories: EditorialCategory[];
+  tags: string[];
+  socialSummary: string;
+  wordCountGuideline: { minWords: number; maxWords: number; allowsLonger: boolean };
 }
 
 export interface ProposedClaim {
@@ -56,6 +67,8 @@ export interface WritingInput extends EditorialIdentity {
   material: Material[];
   sourceRegister: string[];
   revisionInstructions: string[];
+  revisionIssues?: RevisionIssue[];
+  classification?: { category: "nigeria" | "africa" | "world"; tags: string[] };
 }
 
 export interface WritingResult extends EditorialIdentity {
@@ -89,13 +102,35 @@ export interface VisualAsset {
   evidenceIds: string[];
   documentIds: string[];
   provenance: "research_fixture" | "licensed_fixture" | "mock_ai";
-  licence: { status: "active" | "missing" | "revoked"; reference: string };
+  licence: { status: "active" | "missing" | "expired" | "revoked"; reference: string; terms?: string; validUntil?: string | null };
+  title?: string;
+  purpose?: string;
+  snapshot?: { capturedAt: string; observedOn: string | null; dataDigest: string };
+  quality?: VisualQuality;
+}
+
+export const visualRubricWeights = {
+  factual_and_data_accuracy: 30,
+  geographical_accuracy: 20,
+  clarity: 15,
+  editorial_relevance: 10,
+  accessibility: 10,
+  attribution_and_licensing: 10,
+  brand_consistency: 5,
+} as const;
+export type VisualFactor = keyof typeof visualRubricWeights;
+export interface VisualQuality {
+  ratings: Record<Exclude<VisualFactor, "geographical_accuracy">, number> & { geographical_accuracy: number | null };
+  score: number;
+  critical: ("accuracy" | "licensing" | "security")[];
 }
 
 export interface VisualInput extends EditorialIdentity {
   stage: "visual";
   candidates: VisualAsset[];
   revisionInstructions: string[];
+  revisionIssues?: RevisionIssue[];
+  qualityRubric?: 1;
 }
 
 export interface VisualResult extends EditorialIdentity {
@@ -146,11 +181,19 @@ export interface RevisionIssue {
   severity: "critical" | "major" | "minor";
   agentId: "GL-AGENT-004" | "GL-AGENT-006" | "GL-AGENT-007" | "GL-AGENT-008";
   instruction: string;
+  detail?: {
+    affected: { kind: "claim" | "section" | "visual"; ref: string }[];
+    problem: string;
+    evidenceIds: string[];
+    evidenceGap: string | null;
+    blocksPublication: true;
+  };
 }
 
 export interface EditorialInput extends EditorialIdentity, ReviewPackage {
   stage: "editorial";
   verification: ReverificationResult;
+  reviewSpec?: 2;
 }
 
 export interface EditorialResult extends EditorialIdentity {

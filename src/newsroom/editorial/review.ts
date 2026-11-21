@@ -3,8 +3,9 @@ import { identity, rubricWeights } from "./types.ts";
 import type {
   EditorialInput, EditorialResult, Factor, ReverificationInput, ReverificationResult, ReviewPackage, RevisionIssue,
 } from "./types";
-import { eligibleVisual } from "./visual.ts";
-import { groundedArticles } from "./writing.ts";
+import { revisionDetail } from "./revisions.ts";
+import { containsActiveMarkup, containsPrivateContact, eligibleVisual } from "./visual.ts";
+import { followsWordGuideline, groundedArticles } from "./writing.ts";
 
 const criticalIssues: Record<ReverificationResult["critical"][number], RevisionIssue> = {
   rights: { code: "rights", severity: "critical", agentId: "GL-AGENT-007",
@@ -28,8 +29,8 @@ export function inspectPackage(input: ReviewPackage) {
   if (unresolved.length) critical.push("unverified_claim");
   if (!input.rightsActive || input.visual.blockedAssetIds.length) critical.push("rights");
   const content = JSON.stringify([input.article.articles, input.article.proposedClaims, input.visual.assets]);
-  if (/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/i.test(content)) critical.push("privacy");
-  if (/<\s*(?:script|iframe|object|embed)\b|javascript\s*:/i.test(content)) critical.push("security");
+  if (containsPrivateContact(content)) critical.push("privacy");
+  if (containsActiveMarkup(content)) critical.push("security");
   const checkedClaims = [...new Set(input.material.filter(({ frame }) => frame === "verified_fact")
     .flatMap(({ claimIds }) => claimIds))].sort();
   return { unresolved, critical, checkedClaims };
@@ -49,7 +50,7 @@ export function weightedScore(ratings: Record<Factor, number>): number {
 }
 
 export function reviewEdition(input: EditorialInput): EditorialResult {
-  const { critical } = inspectPackage(input);
+  const { critical, unresolved } = inspectPackage(input);
   const checks = new Set([...critical, ...input.verification.critical]);
   if (input.verification.status !== "verified" || canonicalJson(input.verification.version) !== canonicalJson(input.version)) {
     checks.add("invalid_grounding");
@@ -61,7 +62,8 @@ export function reviewEdition(input: EditorialInput): EditorialResult {
     frame === "documented_history" || frame === "disputed_interpretation"));
   const analysis = deep?.sections.some(({ blocks }) => blocks.some(({ frame }) => frame === "conditional_scenario"))
     && deep?.sections.some(({ kind, blocks }) => kind === "analysis" && blocks.some(({ evidenceIds }) => evidenceIds.length));
-  const length = brief && deep && brief.wordCount >= 150 && brief.wordCount <= 300 && deep.wordCount >= 900 && deep.wordCount <= 1500;
+  const length = input.reviewSpec === 2 ? input.article.articles.every(followsWordGuideline)
+    : brief && deep && followsWordGuideline(brief) && followsWordGuideline(deep);
 
   if (!historical) issues.push({ code: "missing_history", severity: "major", agentId: "GL-AGENT-006",
     instruction: "Restore the sourced historical section and keep its date uncertainty visible." });
@@ -79,7 +81,9 @@ export function reviewEdition(input: EditorialInput): EditorialResult {
     analytical_quality: analysis ? 100 : 50,
     writing_quality: length ? 100 : 90,
     source_transparency: input.article.sourceRegister.length >= 2 ? 100 : 60,
-    visual_accuracy_and_quality: input.visual.assets.length ? 100 : 60,
+    visual_accuracy_and_quality: input.visual.assets.length
+      ? Math.floor(Math.min(...input.visual.assets.map((asset) => input.reviewSpec === 2 ? asset.quality?.score ?? 100 : 100)))
+      : 60,
     legal_ethical_and_safety: checks.has("rights") || checks.has("privacy") || checks.has("security") ? 0 : 100,
   };
   const score = weightedScore(ratings);
@@ -91,5 +95,8 @@ export function reviewEdition(input: EditorialInput): EditorialResult {
     : issues.some(({ severity }) => severity === "critical") ? "hold"
     : issues.some(({ severity }) => severity === "major") ? "major_revision"
     : issues.length ? "minor_revision" : "ready_for_human_review";
-  return { ...identity(input), stage: "editorial", version: input.version, ratings, score, decision, issues };
+  return {
+    ...identity(input), stage: "editorial", version: input.version, ratings, score, decision,
+    issues: input.reviewSpec === 2 ? issues.map((issue) => ({ ...issue, detail: revisionDetail(input, issue.code, unresolved) })) : issues,
+  };
 }

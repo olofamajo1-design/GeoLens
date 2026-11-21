@@ -79,10 +79,22 @@ test("the private fixture edition validates writing, visual rights and exact-ver
           item.id === id && item.locator && saved.sources.some(({ documentId }) => documentId === item.documentId))));
       }
       assert.ok(deep.sections.some(({ kind }) => kind === "history") && deep.sections.some(({ kind }) => kind === "scenarios"));
+      assert.equal(brief.metadata.seoTitle, brief.headlines[0]);
+      assert.equal(brief.metadata.socialSummary, brief.standfirst);
+      assert.ok(brief.metadata.seoDescription.length <= 160);
+      assert.ok(brief.metadata.tags.length > 0);
+      assert.deepEqual(brief.metadata.wordCountGuideline, { minWords: 150, maxWords: 300, allowsLonger: false });
+      assert.ok(version.article.articles[2].metadata.categories.includes("history"));
+      assert.deepEqual(version.article.articles[2].metadata.tags, brief.metadata.tags);
       assert.equal(version.visual.assets.length, 7);
       for (const asset of version.visual.assets) {
         assert.equal(asset.licence.status, "active");
         assert.ok(asset.alt && asset.caption && asset.uncertainty && asset.documentIds.length);
+        assert.ok(asset.title && asset.purpose && asset.licence.terms);
+        assert.equal(asset.snapshot.dataDigest, asset.digest);
+        assert.match(asset.snapshot.capturedAt, /^\d{4}-\d\d-\d\dT.*Z$/);
+        assert.equal(asset.quality.score, 100);
+        assert.equal(asset.quality.ratings.geographical_accuracy, asset.data.kind === "map" ? 100 : null);
       }
       assert.equal(version.visual.assets.find(({ data }) => data.kind === "chart").data.values[0].value, 1200);
       assert.equal(version.visual.assets.find(({ data }) => data.kind === "illustration").data.disclosure, "AI-generated synthetic illustration");
@@ -129,6 +141,43 @@ test("the private fixture edition validates writing, visual rights and exact-ver
       assert.ok(!JSON.stringify(saved.versions[0].article.articles).includes("doubled"));
     });
 
+    await t.test("the database rejects forged search metadata, snapshot dates and rubric scores", async () => {
+      const { run } = await prepare({ includeMedia: false });
+      const { claims } = await claim(run);
+      const writing = claims.find(({ task }) => task.stage === "writing");
+      const visual = claims.find(({ task }) => task.stage === "visual");
+      assert.equal(await execute(writing, (output) => {
+        output.articles[0].metadata.tags = ["Invented topic"];
+        return output;
+      }), "retry");
+      assert.equal(await execute(visual, (output) => {
+        output.assets[0].snapshot.observedOn = "2026-01-01";
+        output.assets[0].quality.ratings.geographical_accuracy = 20;
+        return output;
+      }), "retry");
+      assert.deepEqual((await edition(run)).versions, []);
+    });
+
+    await t.test("expired and missing image grants stay out of the edition", async () => {
+      const { run } = await prepare({ expirePhoto: true, omitIllustrationGrant: true });
+      const { claims } = await claim(run);
+      const writing = claims.find(({ task }) => task.stage === "writing");
+      const visual = claims.find(({ task }) => task.stage === "visual");
+      const expired = visual.productionInput.candidates.find((asset) => asset.data.kind === "photo");
+      const missing = visual.productionInput.candidates.find((asset) => asset.data.kind === "illustration");
+      assert.equal(expired.licence.status, "expired");
+      assert.ok(Date.parse(expired.licence.validUntil) < Date.parse(expired.snapshot.capturedAt));
+      assert.equal(missing.licence.status, "missing");
+      const result = await fixtureResult(visual);
+      assert.equal(result.productionResult.assets.length, 5);
+      assert.deepEqual(new Set(result.productionResult.blockedAssetIds), new Set([expired.id, missing.id]));
+      assert.equal(await execute(writing), "succeeded");
+      assert.equal(await execute(visual), "succeeded");
+      const [recheck] = (await claim(run)).claims;
+      assert.equal(await execute(recheck), "escalated");
+      assert.equal((await edition(run)).readyForHumanReview, false);
+    });
+
     await t.test("a media licence revoked during review blocks a score above the threshold", async () => {
       const { run, photo } = await prepare();
       const verify = await completeAssets(run);
@@ -144,6 +193,8 @@ test("the private fixture edition validates writing, visual rights and exact-ver
       assert.ok(review.score >= 85);
       assert.equal(review.decision, "hold");
       assert.equal(review.issues[0].severity, "critical");
+      assert.equal(review.issues[0].detail.blocksPublication, true);
+      assert.ok(review.issues[0].detail.evidenceGap);
       assert.equal(saved.readyForHumanReview, false);
     });
 
@@ -161,9 +212,14 @@ test("the private fixture edition validates writing, visual rights and exact-ver
         assert.equal(saved.currentVersionId, null);
         assert.equal(saved.readyForHumanReview, false);
         assert.equal(saved.versions.length, round + 1);
+        const correction = saved.versions[round].reviews.find(({ stage }) => stage === "editorial").issues[0];
+        assert.deepEqual(correction.detail.affected, [{ kind: "section", ref: "deep_dive:history" }]);
+        assert.ok(correction.detail.problem && correction.detail.evidenceIds.length > 0);
+        assert.equal(correction.detail.blocksPublication, true);
         if (round < 2) {
           const [writing] = (await claim(run)).claims;
           assert.ok(writing.productionInput.revisionInstructions.some((text) => text.includes("historical")));
+          assert.deepEqual(writing.productionInput.revisionIssues[0], correction);
           assert.equal(await execute(writing, shorten), "succeeded");
           [verification] = (await claim(run)).claims;
         }

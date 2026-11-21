@@ -28,7 +28,11 @@ function sameStory(a: EditorialIdentity, b: EditorialIdentity): boolean {
 export function validateProductionInput(stage: ProductionStage, value: unknown): value is ProductionInput {
   if (!validators[stage].input(value)) return false;
   const input = value as ProductionInput;
-  if (input.stage === "visual") return new Set(input.candidates.map(({ id }) => id)).size === input.candidates.length;
+  if (input.stage === "visual") {
+    return new Set(input.candidates.map(({ id }) => id)).size === input.candidates.length
+      && (input.qualityRubric !== 1 || input.candidates.every((asset) =>
+        asset.title && asset.purpose && asset.snapshot && asset.licence.terms && asset.licence.validUntil !== undefined && !asset.quality));
+  }
   if (new Set(input.material.map(({ id }) => id)).size !== input.material.length) return false;
   if (input.stage === "writing") return input.formats[0] === "quick_brief" && input.formats[1] === "deep_dive";
   if (!sameStory(input, input.article) || !sameStory(input, input.visual)

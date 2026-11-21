@@ -59,7 +59,9 @@ async function privateAsset(adminKey, label) {
   ));
 }
 
-export async function seedEditorialVisuals(operator, fixture, adminKey, { includeMedia = true, includeDerived = true } = {}) {
+export async function seedEditorialVisuals(operator, fixture, adminKey, {
+  includeMedia = true, includeDerived = true, expirePhoto = false, omitIllustrationGrant = false,
+} = {}) {
   const findings = await operator("newsroom_research_findings", { target_run: fixture.run });
   const [history, verification, analysis] = ["history", "verification", "analysis"].map((role) =>
     findings.find(({ payload }) => payload.stage === role).payload);
@@ -96,11 +98,13 @@ export async function seedEditorialVisuals(operator, fixture, adminKey, { includ
   if (includeMedia) {
     photo = await privateAsset(adminKey, "Synthetic licensed fixture media");
     const illustration = await privateAsset(adminKey, "Mock AI illustration fixture");
+    if (expirePhoto) sql(`update media.licences set valid_until=clock_timestamp()-interval '10 minutes' where id=${quote(photo.licence)};`);
     metadata.push(
       [{ kind: "photo", assetVersionId: photo.version, disclosure: "Synthetic licensed media fixture" }, dated.evidenceIds,
         "Placeholder media depicts no real event.", photo],
       [{ kind: "illustration", assetVersionId: illustration.version, disclosure: "AI-generated synthetic illustration" }, dated.evidenceIds,
-        "Synthetic illustration represents a concept. It supplies no documentary finding.", illustration],
+        "Synthetic illustration represents a concept. It supplies no documentary finding.",
+        omitIllustrationGrant ? { ...illustration, licence: null } : illustration],
     );
   }
   const ids = {};
@@ -109,9 +113,9 @@ export async function seedEditorialVisuals(operator, fixture, adminKey, { includ
     const alt = data.kind === "chart" ? "One bar at 1,200 households with an axis starting at zero."
       : data.kind === "map" ? "A single approximate point within the synthetic coastal study area." : captions[data.kind] + ".";
     ids[data.kind] = sql(`insert into media.newsroom_fixture_visual_records(event_id,data,caption,alt,uncertainty,
-      evidence_ids,asset_version_id,licence_id) values(${quote(fixture.event)},${quote(JSON.stringify(data))},${quote(captions[data.kind])},
+      evidence_ids,asset_version_id,licence_id,title,purpose) values(${quote(fixture.event)},${quote(JSON.stringify(data))},${quote(captions[data.kind])},
         ${quote(alt)},${quote(uncertainty)},${evidenceIds},${reference ? quote(reference.version) : "null"},
-        ${reference ? quote(reference.licence) : "null"}) returning id;`);
+        ${reference?.licence ? quote(reference.licence) : "null"},${quote(captions[data.kind])},'Explain this synthetic fixture evidence') returning id;`);
   }
   return { ids, photo };
 }
