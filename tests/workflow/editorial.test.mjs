@@ -8,18 +8,10 @@ import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { promptManifest } from "../../src/newsroom/generated/prompts.mjs";
 import { api, localSupabase, quote, sql } from "../helpers/newsroom-fixtures.mjs";
-import { runResearchFixture, seedEditorialVisuals } from "../helpers/editorial-fixtures.mjs";
+import { runResearchFixture, seedEditorialVisuals, seedEvidenceChart } from "../helpers/editorial-fixtures.mjs";
+import { ingestResearchFixture, researchRunFor } from "../helpers/research-fixtures.mjs";
 
-test("local Workerd dispatches the explicitly queued editorial fixture through private human review", { timeout: 75_000 }, async () => {
-  const { key, adminKey, createUser, caller } = localSupabase();
-  const token = await createUser("newsroom_operator");
-  const ingestionToken = await createUser("ingestion_operator");
-  const operator = caller(token);
-  sql("update ai_ops.discovery_usage set amount_minor=0 where scope='development';");
-  const fixture = await runResearchFixture(operator, caller(ingestionToken));
-  await seedEditorialVisuals(operator, fixture, adminKey);
-  assert.equal(await operator("queue_newsroom_edition", { target_run: fixture.run, prompt_manifest: promptManifest }), true);
-
+async function withEditorialWorker(mode, { key, token, secrets }, run) {
   const directory = await mkdtemp(join(tmpdir(), "geolens-editorial-"));
   const envFile = join(directory, "fixture.env");
   await writeFile(envFile, `NEWSROOM_DB_URL=${api}\nNEWSROOM_DB_PUBLIC_KEY=${key}\nNEWSROOM_OPERATOR_JWT=${token}\n`, { mode: 0o600 });
@@ -27,14 +19,14 @@ test("local Workerd dispatches the explicitly queued editorial fixture through p
   const server = spawn(process.execPath, [
     "node_modules/wrangler/bin/wrangler.js", "dev", "--config", "build/server/wrangler.json",
     "--local", "--ip", "127.0.0.1", "--port", "4179", "--test-scheduled",
-    "--var", "NEWSROOM_MODE:editorial-fixture", "--env-file", envFile, "--persist-to", directory,
+    "--var", "NEWSROOM_MODE:" + mode, "--env-file", envFile, "--persist-to", directory,
   ], { stdio: ["ignore", "pipe", "pipe"] });
   const closed = once(server, "close");
   let logs = "";
   for (const stream of [server.stdout, server.stderr]) {
     stream.setEncoding("utf8").on("data", (chunk) => { logs = (logs + chunk).slice(-8000); });
   }
-  const diagnostics = () => [key, adminKey, token, ingestionToken].reduce(
+  const diagnostics = () => [key, token, ...secrets].reduce(
     (text, secret) => text.replaceAll(secret, "[redacted]"), logs,
   );
 
@@ -48,8 +40,26 @@ test("local Workerd dispatches the explicitly queued editorial fixture through p
     assert.ok(ready, diagnostics());
     const dispatch = () => fetch(worker + "/cdn-cgi/local/scheduled?cron=" + encodeURIComponent("*/15 * * * *"),
       { signal: AbortSignal.timeout(5000) });
-    assert.ok((await dispatch()).ok, diagnostics());
+    await run(dispatch, diagnostics);
+  } finally {
+    server.kill();
+    await closed;
+    await rm(directory, { recursive: true, force: true });
+  }
+}
 
+test("local Workerd dispatches the explicitly queued editorial fixture through private human review", { timeout: 75_000 }, async () => {
+  const { key, adminKey, createUser, caller } = localSupabase();
+  const token = await createUser("newsroom_operator");
+  const ingestionToken = await createUser("ingestion_operator");
+  const operator = caller(token);
+  sql("update ai_ops.discovery_usage set amount_minor=0 where scope='development';");
+  const fixture = await runResearchFixture(operator, caller(ingestionToken));
+  await seedEditorialVisuals(operator, fixture, adminKey);
+  assert.equal(await operator("queue_newsroom_edition", { target_run: fixture.run, prompt_manifest: promptManifest }), true);
+
+  await withEditorialWorker("editorial-fixture", { key, token, secrets: [adminKey, ingestionToken] }, async (dispatch, diagnostics) => {
+    assert.ok((await dispatch()).ok, diagnostics());
     let state;
     for (let attempt = 0; attempt < 150; attempt++) {
       state = await operator("newsroom_fixture_status", { target_run: fixture.run });
@@ -65,9 +75,51 @@ test("local Workerd dispatches the explicitly queued editorial fixture through p
     assert.ok(state.tasks.every(({ attempts }) => attempts.length === 1 && attempts[0].actualMinor === 0));
     assert.ok((await dispatch()).ok, diagnostics());
     assert.equal(sql(`select count(*) from editorial.newsroom_edition_versions where run_id=${quote(fixture.run)};`), "1");
-  } finally {
-    server.kill();
-    await closed;
-    await rm(directory, { recursive: true, force: true });
-  }
+  });
+});
+
+test("local Workerd runs all eight agents from synthetic ingestion through private human review", { timeout: 75_000 }, async (t) => {
+  const { key, adminKey, createUser, elevate, caller } = localSupabase();
+  const token = await createUser("newsroom_operator");
+  const ingestionToken = await createUser("ingestion_operator");
+  const reviewer = await elevate(await createUser("human_editor"));
+  const operator = caller(token);
+  const { event } = await ingestResearchFixture(caller(ingestionToken));
+  assert.match(seedEvidenceChart(event), /^[a-f0-9-]{36}$/);
+  assert.equal(researchRunFor(event), "");
+
+  await withEditorialWorker("integrated-fixture", { key, token, secrets: [adminKey, ingestionToken, reviewer] }, async (dispatch, diagnostics) => {
+    assert.ok((await dispatch()).ok, diagnostics());
+    let run;
+    let state;
+    for (let attempt = 0; attempt < 150; attempt++) {
+      run ||= researchRunFor(event);
+      if (run) {
+        state = await operator("newsroom_fixture_status", { target_run: run });
+        if (state.state === "human_review" || state.state === "escalated") break;
+      }
+      await delay(200);
+    }
+    assert.equal(state?.state, "human_review", JSON.stringify(state) + "\n" + diagnostics());
+    assert.equal(sql(`select a.code from ai_ops.workflow_runs w join ai_ops.prompt_versions p on p.id=w.orchestrator_prompt_id
+      join ai_ops.agents a on a.id=p.agent_id where w.id=${quote(run)};`), "GL-AGENT-001");
+    assert.deepEqual([...new Set(state.tasks.map(({ agentId }) => agentId))].sort(),
+      ["GL-AGENT-002", "GL-AGENT-003", "GL-AGENT-004", "GL-AGENT-005", "GL-AGENT-006", "GL-AGENT-007", "GL-AGENT-008"]);
+    assert.equal(state.tasks.filter(({ agentId }) => agentId === "GL-AGENT-004").length, 2);
+    assert.ok(state.tasks.every(({ attempts }) => attempts.length === 1 && attempts[0].actualMinor === 0));
+    const queue = await caller(reviewer)("newsroom_fixture_review_queue");
+    assert.ok(queue.some(({ id, state: phase }) => id === run && phase === "human_review"));
+    const edition = await caller(reviewer)("newsroom_edition", { target_run: run });
+    assert.equal(edition.readyForHumanReview, true);
+    assert.equal(edition.approvalCurrent, false);
+    assert.equal(edition.versions.length, 1);
+    const [version] = edition.versions;
+    assert.deepEqual(version.article.articles.map(({ format }) => format), ["quick_brief", "deep_dive"]);
+    assert.equal(version.visual.assets[0].data.values[0].value, 1200);
+    assert.ok(version.reviews.every(({ version: reviewed }) => reviewed.digest === version.digest));
+    assert.equal(version.reviews.find(({ stage }) => stage === "editorial").decision, "ready_for_human_review");
+    assert.ok((await dispatch()).ok, diagnostics());
+    assert.equal(sql(`select count(*) from editorial.newsroom_edition_versions where run_id=${quote(run)};`), "1");
+    t.diagnostic(`Synthetic event ${event}, run ${run}, edition ${version.id}, digest ${version.digest}, eight attempts, USD 0 actual spend`);
+  });
 });

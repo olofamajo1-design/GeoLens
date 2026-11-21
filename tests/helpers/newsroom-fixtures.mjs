@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { totp } from "./totp.mjs";
 
 export const api = "http://127.0.0.1:54321";
 const cli = process.env.GEOLENS_SUPABASE_CLI ?? "supabase";
@@ -24,17 +25,30 @@ export function localSupabase() {
       body: JSON.stringify(body),
     });
   }
-  async function createUser(role) {
+  async function createUser(...roles) {
     const email = "newsroom-fixture-" + randomUUID() + "@example.com";
     const password = randomUUID();
     const created = await request("/auth/v1/admin/users", { email, password, email_confirm: true }, { key: SERVICE_ROLE_KEY });
     assert.ok(created.ok, "synthetic account created");
     const { id } = await created.json();
-    if (role) sql(`insert into app.user_roles(user_id,role_id)
-      select ${quote(id)},id from app.roles where code=${quote(role)};`);
+    if (roles.length) sql(`insert into app.user_roles(user_id,role_id)
+      select ${quote(id)},id from app.roles where code in (${roles.map(quote).join(",")});`);
     const session = await request("/auth/v1/token?grant_type=password", { email, password });
     assert.ok(session.ok, "synthetic session created");
     return (await session.json()).access_token;
+  }
+  async function elevate(token) {
+    async function auth(path, body) {
+      const reply = await request("/auth/v1/" + path, body, { token });
+      assert.ok(reply.ok, "synthetic TOTP " + path.split("/").at(-1) + " returned " + reply.status);
+      return reply.json();
+    }
+    const factor = await auth("factors", { factor_type: "totp", friendly_name: "Synthetic edition reviewer" });
+    const path = "factors/" + factor.id;
+    const challenge = await auth(path + "/challenge", {});
+    const session = await auth(path + "/verify", { challenge_id: challenge.id, code: totp(factor.totp.secret) });
+    assert.equal(JSON.parse(Buffer.from(session.access_token.split(".")[1], "base64url")).aal, "aal2");
+    return session.access_token;
   }
   const response = (method, body, token) => request("/rest/v1/rpc/" + method, body, { token });
   const caller = (token) => async (method, body = {}) => {
@@ -42,7 +56,7 @@ export function localSupabase() {
     assert.ok(reply.ok, await reply.clone().text());
     return reply.json();
   };
-  return { key: ANON_KEY, adminKey: SERVICE_ROLE_KEY, createUser, response, caller };
+  return { key: ANON_KEY, adminKey: SERVICE_ROLE_KEY, createUser, elevate, response, caller };
 }
 
 export function seedEndpoint({ enabled = false, fixture = true, adapter = "gdelt" } = {}) {

@@ -20,4 +20,4 @@ The fixture adapter needs no environment variables. Keep any future local creden
 
 The development budget is $30–$50 monthly excluding existing subscriptions. The commercial operating ceiling is $300 monthly. Paid activation, production credentials, deployment, and live payments require separate authorization.
 
-The [Stage 5A newsroom](../architecture/newsroom-stage-5a.md) runs against disposable local Supabase with synthetic inputs and mock responses. Build the Worker with `npm run check` before running `npm run test:workflow`. The Workerd tests create the scoped fixture operator sessions and enable fixture mode only in the temporary local runtime.
+The integrated newsroom runs against disposable local Supabase with synthetic inputs and mock responses. Build the Worker with `npm run check` before running `npm run demo:newsroom` or `npm run test:workflow`. The Workerd tests create the scoped fixture sessions and enable fixture mode in the temporary local runtime. [Integrated newsroom](../architecture/newsroom-stage-5d.md)

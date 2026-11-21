@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { executeFixture } from "../../src/newsroom/execution.ts";
 import { promptManifest } from "../../src/newsroom/generated/prompts.mjs";
 import { createOpenAIFixtureProvider } from "../../src/providers/openai-fixture.server.ts";
+import { fixtureId } from "../fixtures/research.ts";
 import { api, quote, sql } from "./newsroom-fixtures.mjs";
 import { ingestResearchFixture, researchRunFor } from "./research-fixtures.mjs";
 
@@ -57,6 +58,20 @@ async function privateAsset(adminKey, label) {
         select id,'Synthetic test licence',now()-interval '1 hour' from asset returning id)
     select jsonb_build_object('version',v.id,'licence',l.id) from version v cross join licence l;`
   ));
+}
+
+// Preload a curated visual for the end-to-end fixture. The workflow still has to verify its value and evidence.
+export function seedEvidenceChart(event) {
+  const claimId = fixtureId(21);
+  const data = { kind: "chart", scale: "linear", baseline: 0, unit: "households",
+    values: [{ label: "Synthetic exercise", claimId, value: 1200 }] };
+  return sql(`insert into media.newsroom_fixture_visual_records(event_id,data,caption,alt,uncertainty,evidence_ids,title,purpose)
+    select ${quote(event)},${quote(JSON.stringify(data))},'Households recorded in the synthetic exercise',
+      'One bar at 1,200 households with an axis starting at zero.', 'The fixture does not measure regional coverage.',
+      array_agg(id order by id),'Synthetic exercise household count','Show the verified fixture measurement'
+    from research.newsroom_fixture_evidence
+    where event_id=${quote(event)} and annotation->>'claimId'=${quote(claimId)}
+    returning id;`);
 }
 
 export async function seedEditorialVisuals(operator, fixture, adminKey, {

@@ -31,6 +31,7 @@ Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` if an installed Chromium should be used. Se
 - [Local development and CI](docs/operations/development.md)
 - [Foundation architecture](docs/architecture/foundation.md)
 - [Newsroom contracts and editorial policy](docs/newsroom/contracts.md)
+- [Integrated newsroom and synthetic demonstration](docs/architecture/newsroom-stage-5d.md)
 
 ## Local database security
 
