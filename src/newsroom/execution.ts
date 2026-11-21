@@ -3,6 +3,8 @@ import { fixturePrompts } from "./generated/prompts.mjs";
 import type { AgentId } from "./registry";
 import { isResearchStage, researchDisposition, validateResearchInput, validateResearchResult } from "./research/contracts.ts";
 import type { ResearchInput, ResearchResult } from "./research/types";
+import { isProductionStage, productionDisposition, validateProductionInput, validateProductionResult } from "./editorial/contracts.ts";
+import type { ProductionInput, ProductionResult } from "./editorial/types";
 
 const stageAgents = {
   discovery: "GL-AGENT-002", history: "GL-AGENT-003", verification: "GL-AGENT-004",
@@ -38,6 +40,7 @@ export interface FixtureTask {
 export interface Claim {
   task: FixtureTask;
   researchInput?: ResearchInput;
+  productionInput?: ProductionInput;
   promptVersion: number;
   promptDigest: string;
   model: string;
@@ -49,11 +52,12 @@ export interface Claim {
 export type Failure = "invalid_input" | "invalid_output" | "provider_error" | "usage_limit" | "timeout";
 export type AttemptResult =
   | { failure: Failure }
-  | { output: FixtureOutput; inputTokens: number; outputTokens: number; researchResult?: ResearchResult };
+  | { output: FixtureOutput; inputTokens: number; outputTokens: number; researchResult?: ResearchResult; productionResult?: ProductionResult };
 
 export type FixtureProvider = (args: {
   task: FixtureTask;
   researchInput?: ResearchInput;
+  productionInput?: ProductionInput;
   instructions: string;
   model: string;
   maxOutputTokens: number;
@@ -68,7 +72,7 @@ function validOutcome(value: unknown, stage: Stage): value is FixtureOutput {
 }
 
 export async function executeFixture(claim: Claim, provider: FixtureProvider): Promise<AttemptResult> {
-  const { task, researchInput } = claim;
+  const { task, researchInput, productionInput } = claim;
   if (!validateFixtureTask(task) || stageAgents[task.stage] !== task.agentId
     || task.dependencies.some(({ stage, result }) => !validOutcome(result, stage) || result.disposition !== "complete")
     || (task.revisionRequest !== null
@@ -84,6 +88,13 @@ export async function executeFixture(claim: Claim, provider: FixtureProvider): P
       || researchInput.attemptId !== task.attemptId || researchInput.eventId !== task.eventId) return { failure: "invalid_input" };
     research = researchInput;
   }
+  let production: ProductionInput | undefined;
+  if (productionInput !== undefined) {
+    if (research || prompt.version < 2 || !isProductionStage(task.stage) || !validateProductionInput(task.stage, productionInput)
+      || productionInput.attemptId !== task.attemptId || productionInput.eventId !== task.eventId
+      || productionInput.runId !== task.runId || productionInput.round !== task.round) return { failure: "invalid_input" };
+    production = productionInput;
+  }
 
   const remaining = Date.parse(claim.leaseExpiresAt) - Date.now();
   if (!Number.isFinite(remaining) || remaining <= 0) return { failure: "timeout" };
@@ -92,7 +103,7 @@ export async function executeFixture(claim: Claim, provider: FixtureProvider): P
   try {
     const result = await Promise.race([
       provider({
-        task, researchInput: research, instructions: prompt.text, model: claim.model,
+        task, researchInput: research, productionInput: production, instructions: prompt.text, model: claim.model,
         maxOutputTokens: claim.maxOutputTokens, signal: controller.signal,
       }),
       new Promise<never>((_, reject) => {
@@ -103,6 +114,13 @@ export async function executeFixture(claim: Claim, provider: FixtureProvider): P
       }),
     ]);
     const { output, inputTokens, outputTokens } = result;
+    if (production) {
+      if (!validateProductionResult(production, output)) return { failure: "invalid_output" };
+      if (!withinLimit(inputTokens, claim.maxInputTokens) || !withinLimit(outputTokens, claim.maxOutputTokens)) {
+        return { failure: "usage_limit" };
+      }
+      return { productionResult: output, inputTokens, outputTokens, output: productionDisposition(output) };
+    }
     if (research) {
       if (!validateResearchResult(research, output)) return { failure: "invalid_output" };
       if (!withinLimit(inputTokens, claim.maxInputTokens) || !withinLimit(outputTokens, claim.maxOutputTokens)) {

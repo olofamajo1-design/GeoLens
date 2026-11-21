@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.geolens.invalid/newsroom/editorial-output.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "synthetic",
+    "runId",
+    "eventId",
+    "storyId",
+    "attemptId",
+    "round",
+    "stage",
+    "version",
+    "ratings",
+    "score",
+    "decision",
+    "issues"
+  ],
+  "properties": {
+    "contractVersion": {
+      "const": 1
+    },
+    "synthetic": {
+      "const": true
+    },
+    "runId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "eventId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "storyId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "attemptId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "round": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4
+    },
+    "stage": {
+      "const": "editorial"
+    },
+    "version": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/production-common.v1.json#/$defs/version"
+    },
+    "ratings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "factual_accuracy_and_evidence",
+        "research_completeness_and_context",
+        "balance_and_independence",
+        "analytical_quality",
+        "writing_quality",
+        "source_transparency",
+        "visual_accuracy_and_quality",
+        "legal_ethical_and_safety"
+      ],
+      "properties": {
+        "factual_accuracy_and_evidence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "research_completeness_and_context": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "balance_and_independence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "analytical_quality": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "writing_quality": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "source_transparency": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "visual_accuracy_and_quality": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "legal_ethical_and_safety": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "ready_for_human_review",
+        "minor_revision",
+        "major_revision",
+        "hold",
+        "reject"
+      ]
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "severity",
+          "agentId",
+          "instruction"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "rights",
+              "privacy",
+              "security",
+              "unverified_claim",
+              "invalid_grounding",
+              "missing_history",
+              "missing_analysis",
+              "missing_visuals",
+              "source_balance",
+              "below_threshold"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "major",
+              "minor"
+            ]
+          },
+          "agentId": {
+            "type": "string",
+            "enum": [
+              "GL-AGENT-004",
+              "GL-AGENT-006",
+              "GL-AGENT-007",
+              "GL-AGENT-008"
+            ]
+          },
+          "instruction": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 320
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 16
+    }
+  }
+}

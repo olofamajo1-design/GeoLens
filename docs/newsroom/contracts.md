@@ -6,6 +6,8 @@ The foundation Draft 2020-12 task and result schemas share the schema version, s
 
 [Stage 5B](../architecture/newsroom-stage-5b.md) defines the role-specific research contracts for discovery, history, verification and analysis, with private durable source and evidence links.
 
+[Stage 5C](../architecture/newsroom-stage-5c.md) adds writing, visual intelligence, exact-version reverification and AI editorial assessment contracts for private fixture editions.
+
 ## Editorial authority
 
 The founder is the initial Human Editor-in-Chief and super administrator. Public content requires factual verification, AI editorial review, and authenticated human approval of the exact article and media versions. Material revisions invalidate prior approval. Preserve evidence, citations, corrections, and audit history. AI agents cannot authorize publication.

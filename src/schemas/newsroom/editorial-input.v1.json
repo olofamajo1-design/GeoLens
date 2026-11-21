@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.geolens.invalid/newsroom/editorial-input.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "synthetic",
+    "runId",
+    "eventId",
+    "storyId",
+    "attemptId",
+    "round",
+    "stage",
+    "version",
+    "article",
+    "visual",
+    "material",
+    "rightsActive",
+    "independentOrigins",
+    "verification"
+  ],
+  "properties": {
+    "contractVersion": {
+      "const": 1
+    },
+    "synthetic": {
+      "const": true
+    },
+    "runId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "eventId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "storyId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "attemptId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "round": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4
+    },
+    "stage": {
+      "const": "editorial"
+    },
+    "version": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/production-common.v1.json#/$defs/version"
+    },
+    "article": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/writing-output.v1.json"
+    },
+    "visual": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/visual-output.v1.json"
+    },
+    "material": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/production-common.v1.json#/$defs/material"
+    },
+    "rightsActive": {
+      "type": "boolean"
+    },
+    "independentOrigins": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 48
+    },
+    "verification": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/reverification-output.v1.json"
+    }
+  }
+}

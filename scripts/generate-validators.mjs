@@ -6,6 +6,7 @@ import result from "../src/schemas/agent-result.v1.json" with { type: "json" };
 import discovery from "../src/schemas/discovery-documents.v1.json" with { type: "json" };
 import fixtureTask from "../src/schemas/newsroom-fixture-task.v1.json" with { type: "json" };
 import researchCommon from "../src/schemas/newsroom/research-common.v1.json" with { type: "json" };
+import productionCommon from "../src/schemas/newsroom/production-common.v1.json" with { type: "json" };
 import fixtureOutput from "../src/schemas/newsroom-fixture-output.v1.json" with { type: "json" };
 import { agents } from "../src/newsroom/registry.ts";
 
@@ -19,13 +20,14 @@ ajv.addSchema(discovery, "discovery");
 ajv.addSchema(fixtureOutput, "fixtureOutput");
 ajv.addSchema(fixtureTask, "fixtureTask");
 ajv.addSchema(researchCommon);
+ajv.addSchema(productionCommon);
 
-const researchValidators = {};
-for (const stage of ["discovery", "history", "verification", "analysis"]) {
+const roleValidators = {};
+for (const stage of ["discovery", "history", "verification", "analysis", "writing", "visual", "reverification", "editorial"]) {
   for (const direction of ["input", "output"]) {
     const schema = JSON.parse(readFileSync(new URL(`../src/schemas/newsroom/${stage}-${direction}.v1.json`, import.meta.url), "utf8"));
     ajv.addSchema(schema);
-    researchValidators["validate" + stage[0].toUpperCase() + stage.slice(1) + (direction === "input" ? "Input" : "Output")] = schema.$id;
+    roleValidators["validate" + stage[0].toUpperCase() + stage.slice(1) + (direction === "input" ? "Input" : "Output")] = schema.$id;
   }
 }
 
@@ -37,7 +39,7 @@ const generated = standalone(ajv, {
   validateDiscovery: "discovery",
   validateFixtureTask: "fixtureTask",
   validateFixtureOutput: "fixtureOutput",
-  ...researchValidators,
+  ...roleValidators,
 });
 // Ajv emits CommonJS references for these runtime helpers even in ESM mode.
 const esm = generated.replaceAll('require("ajv/dist/runtime/ucs2length").default', "ucs2length")

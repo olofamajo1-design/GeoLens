@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.geolens.invalid/newsroom/visual-output.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "synthetic",
+    "runId",
+    "eventId",
+    "storyId",
+    "attemptId",
+    "round",
+    "stage",
+    "assets",
+    "blockedAssetIds",
+    "layout"
+  ],
+  "properties": {
+    "contractVersion": {
+      "const": 1
+    },
+    "synthetic": {
+      "const": true
+    },
+    "runId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "eventId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "storyId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "attemptId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "round": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4
+    },
+    "stage": {
+      "const": "visual"
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.geolens.invalid/newsroom/production-common.v1.json#/$defs/visual"
+      },
+      "minItems": 0,
+      "maxItems": 16
+    },
+    "blockedAssetIds": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+      },
+      "minItems": 0,
+      "maxItems": 48,
+      "uniqueItems": true
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "responsive",
+        "foreground",
+        "accent",
+        "fallback"
+      ],
+      "properties": {
+        "responsive": {
+          "const": true
+        },
+        "foreground": {
+          "const": "--ink"
+        },
+        "accent": {
+          "const": "--accent"
+        },
+        "fallback": {
+          "const": "text_and_data"
+        }
+      }
+    }
+  }
+}
