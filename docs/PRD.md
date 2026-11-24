@@ -1,6 +1,6 @@
 # GeoLens AI — Product Requirements Document
 
-**Version:** 1.3 | **Purpose:** Assignment 4 — classroom validation PRD | **Date:** 24 November 2026  
+**Version:** 1.4 | **Purpose:** Assignment 4 — classroom validation PRD | **Date:** 24 November 2026  
 **Tagline:** *Beyond the headlines. Understand the world.*  
 **Source:** GeoLens Master PRD v1.1; five documented exploratory interviews. **Status:** Proposed validation plan, not commercial-launch approval.
 
@@ -68,6 +68,8 @@ For people following world news who need historical context and clarity about co
 | 6 | Completes a short evaluation | Records consented answers and time | Researcher can compare outcomes |
 
 **Validation method:** Five participants complete comparable, timed research tasks using GeoLens and their normal sources. Alternate which method is used first and use matched questions to limit practice effects. Record comprehension, source identification, time and preference. **No test has yet been completed.**
+
+**MVP visual evidence:** See [MVP screenshots and evidence](mvp-screenshots.md) for the six planned prototype views (homepage, Quick Brief, historical timeline, conflicting accounts, source evidence and mobile layout). **Screenshots are TO CAPTURE** from the actual GeoLens prototype; they are not yet evidence of completed functionality. The separate five design-inspiration screenshots belong to Assignment 4 Task 5.
 
 ## 7. Out of Scope (Not Now)
 
