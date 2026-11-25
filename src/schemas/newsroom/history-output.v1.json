@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.geolens.invalid/newsroom/history-output.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stage",
+    "contractVersion",
+    "synthetic",
+    "eventId",
+    "attemptId",
+    "sourceRegister",
+    "researchId",
+    "depth",
+    "overview",
+    "period",
+    "origins",
+    "timeline",
+    "actors",
+    "rootCauses",
+    "previousResolutions",
+    "comparativeAnalysis",
+    "competingInterpretations",
+    "consequences",
+    "evidenceGaps",
+    "confidence"
+  ],
+  "properties": {
+    "stage": {
+      "type": "string",
+      "const": "history"
+    },
+    "contractVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "synthetic": {
+      "type": "boolean",
+      "const": true
+    },
+    "eventId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "attemptId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "sourceRegister": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/idList"
+    },
+    "researchId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "depth": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/depth"
+    },
+    "overview": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 600
+    },
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "earliestYear",
+        "latestYear",
+        "rationale"
+      ],
+      "properties": {
+        "earliestYear": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -1000000,
+              "maximum": 1000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latestYear": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -1000000,
+              "maximum": 1000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 600
+        }
+      }
+    },
+    "origins": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/historicalFinding"
+      },
+      "maxItems": 48
+    },
+    "timeline": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/historicalFinding"
+      },
+      "maxItems": 48
+    },
+    "actors": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/historicalFinding"
+      },
+      "maxItems": 48
+    },
+    "rootCauses": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/historicalFinding"
+      },
+      "maxItems": 48
+    },
+    "previousResolutions": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/historicalFinding"
+      },
+      "maxItems": 48
+    },
+    "comparativeAnalysis": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/historicalFinding"
+      },
+      "maxItems": 48
+    },
+    "competingInterpretations": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/historicalFinding"
+      },
+      "maxItems": 48
+    },
+    "consequences": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/historicalFinding"
+      },
+      "maxItems": 48
+    },
+    "evidenceGaps": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 600
+      },
+      "maxItems": 48
+    },
+    "confidence": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/confidence"
+    }
+  }
+}

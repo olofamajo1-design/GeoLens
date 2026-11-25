@@ -22,7 +22,8 @@
     "test:database": "node --test --test-concurrency=1 tests/integration/*.test.mjs",
     "test:browser": "playwright test",
     "ingestion:dry-run": "node scripts/discovery-dry-run.mjs",
-    "test:workflow": "node --test tests/workflow/*.test.mjs",
+    "test:workflow": "node --test --test-concurrency=1 tests/workflow/*.test.mjs",
+    "demo:newsroom": "node --test --test-name-pattern='all eight agents' tests/workflow/editorial.test.mjs",
     "preingestion:pilot": "npm run generate:schemas",
     "ingestion:pilot": "node scripts/discovery-pilot.mjs",
     "pretest:database": "npm run generate:schemas"

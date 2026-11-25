@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.geolens.invalid/newsroom/discovery-input.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stage",
+    "contractVersion",
+    "synthetic",
+    "eventId",
+    "attemptId",
+    "sources",
+    "headline",
+    "locations",
+    "entities",
+    "ingestionLabel",
+    "scores",
+    "priority",
+    "verificationAttention"
+  ],
+  "properties": {
+    "stage": {
+      "type": "string",
+      "const": "discovery"
+    },
+    "contractVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "synthetic": {
+      "type": "boolean",
+      "const": true
+    },
+    "eventId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "attemptId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/source"
+      },
+      "maxItems": 24
+    },
+    "headline": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 400
+    },
+    "locations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "country"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          }
+        }
+      },
+      "maxItems": 24
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+      },
+      "maxItems": 48,
+      "uniqueItems": true
+    },
+    "ingestionLabel": {
+      "type": "string",
+      "enum": [
+        "breaking",
+        "developing",
+        "trending",
+        "review"
+      ]
+    },
+    "scores": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/scores"
+    },
+    "priority": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/priority"
+    },
+    "verificationAttention": {
+      "type": "boolean"
+    }
+  }
+}

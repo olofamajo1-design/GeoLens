@@ -7,7 +7,8 @@
     "nodejs_compat"
   ],
   "vars": {
-    "DISCOVERY_MODE": "disabled"
+    "DISCOVERY_MODE": "disabled",
+    "NEWSROOM_MODE": "disabled"
   },
   "triggers": {
     "crons": [
@@ -19,6 +20,11 @@
       "name": "geolens-discovery",
       "binding": "DISCOVERY",
       "class_name": "DiscoveryWorkflow"
+    },
+    {
+      "name": "geolens-newsroom-fixtures",
+      "binding": "NEWSROOM",
+      "class_name": "NewsroomWorkflow"
     }
   ]
 }

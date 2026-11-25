@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.geolens.invalid/newsroom/verification-output.v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stage",
+    "contractVersion",
+    "synthetic",
+    "eventId",
+    "attemptId",
+    "sourceRegister",
+    "verificationId",
+    "asOf",
+    "methodology",
+    "claims"
+  ],
+  "properties": {
+    "stage": {
+      "type": "string",
+      "const": "verification"
+    },
+    "contractVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "synthetic": {
+      "type": "boolean",
+      "const": true
+    },
+    "eventId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "attemptId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "sourceRegister": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/idList"
+    },
+    "verificationId": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+    },
+    "asOf": {
+      "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/date"
+    },
+    "methodology": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 600
+      },
+      "maxItems": 8,
+      "minItems": 1
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "claimId",
+          "originalClaim",
+          "normalizedClaim",
+          "type",
+          "material",
+          "sensitive",
+          "evidenceIds",
+          "supporting",
+          "contradictory",
+          "excluded",
+          "verdict",
+          "confidence",
+          "outdated",
+          "limitations",
+          "correctionRequired",
+          "correction",
+          "mixedAssessment",
+          "recommendedAction"
+        ],
+        "properties": {
+          "claimId": {
+            "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/id"
+          },
+          "originalClaim": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "normalizedClaim": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "type": {
+            "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/claimType"
+          },
+          "material": {
+            "type": "boolean"
+          },
+          "sensitive": {
+            "type": "boolean"
+          },
+          "evidenceIds": {
+            "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/citations"
+          },
+          "supporting": {
+            "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/assessment"
+          },
+          "contradictory": {
+            "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/assessment"
+          },
+          "excluded": {
+            "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/assessment"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "mostly_accurate",
+              "partially_accurate",
+              "misleading",
+              "false",
+              "unverified"
+            ]
+          },
+          "confidence": {
+            "$ref": "https://schemas.geolens.invalid/newsroom/research-common.v1.json#/$defs/confidence"
+          },
+          "outdated": {
+            "type": "boolean"
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 600
+            },
+            "maxItems": 48
+          },
+          "correctionRequired": {
+            "type": "boolean"
+          },
+          "correction": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 600
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mixedAssessment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 600
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recommendedAction": {
+            "type": "string",
+            "enum": [
+              "retain",
+              "correct",
+              "update",
+              "seek_evidence",
+              "escalate"
+            ]
+          }
+        }
+      },
+      "maxItems": 48
+    }
+  }
+}

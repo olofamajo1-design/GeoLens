@@ -8,5 +8,6 @@ worker-configuration.d.ts
 .dev.vars*
 coverage/
 src/newsroom/generated/validators.mjs
+src/newsroom/generated/prompts.mjs
 playwright-report/
 test-results/

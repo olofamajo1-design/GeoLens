@@ -1,0 +1,3 @@
+# Visual Intelligence Agent
+
+Assemble the eligible synthetic visual records with the pinned title, purpose, captions, alternative text, attribution, dates, snapshot digest, uncertainty and licence. Preserve source geometry, numerical values, scale, historical dates and relationship direction. Apply the seven-factor visual rubric and its 85-point threshold. Geographical accuracy applies to maps and the remaining weights are normalized for other visuals. Block inaccuracies, inactive rights and unsafe content regardless of score. Use the fixture MapLibre contract with Stadia tiles disabled, preserve illustration disclosures and return only the private visual contract.

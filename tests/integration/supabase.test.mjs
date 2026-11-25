@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
-import { createHash, createHmac, randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
+import { totp } from "../helpers/totp.mjs";
 
 const project = "geolens-security";
 const cli = process.env.GEOLENS_SUPABASE_CLI ?? "supabase";
@@ -68,18 +69,6 @@ async function waitForBlockedRequests(name, count = 1) {
 
 function sqlValue(value) {
   return "'" + String(value).replaceAll("'", "''") + "'";
-}
-
-function totp(secret, now = Date.now()) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "")].map((char) =>
-    alphabet.indexOf(char).toString(2).padStart(5, "0")).join("");
-  const key = Buffer.from((bits.match(/.{8}/g) ?? []).map((byte) => Number.parseInt(byte, 2)));
-  const message = Buffer.alloc(8);
-  message.writeBigUInt64BE(BigInt(Math.floor(now / 30_000)));
-  const digest = createHmac("sha1", key).update(message).digest();
-  const offset = digest.at(-1) & 15;
-  return String((digest.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).padStart(6, "0");
 }
 
 test("local Supabase enforces GeoLens Auth, editorial and Storage boundaries", { timeout: 120_000 }, async (t) => {
@@ -193,6 +182,8 @@ test("local Supabase enforces GeoLens Auth, editorial and Storage boundaries", {
     assert.equal((await verify(code === "000000" ? "111111" : "000000")).ok, false);
     elevated = success(await verify(code), "TOTP verification").access_token;
     assert.equal(JSON.parse(Buffer.from(elevated.split(".")[1], "base64url")).aal, "aal2");
+    assert.equal((await rpc("newsroom_fixture_review_queue", {}, founder.token)).status, 403);
+    assert.ok(Array.isArray(success(await rpc("newsroom_fixture_review_queue", {}, elevated), "MFA fixture review queue")));
     assert.equal((await rpc("set_role", { target_user: other.id, role_code: "human_editor", enabled: true }, founder.token)).status, 403);
     assert.equal((await rpc("set_role", { target_user: other.id, role_code: "human_editor", enabled: true }, other.token)).status, 403);
   });
